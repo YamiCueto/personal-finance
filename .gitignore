@@ -39,22 +39,49 @@ service_account.json
 *service_role*
 
 # ==============================================================================
-# Build & Runtime Artifacts
+# Compiled Output & Build Artifacts
 # ==============================================================================
-/node_modules/
-/.angular/cache/
-/dist/
-/out/
-*.log
-npm-debug.log*
-yarn-debug.log*
+/dist
+/tmp
+/out-tsc
+/bazel-out
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+__screenshots__/
 
 # ==============================================================================
-# OS & Editor Files (avoiding credential or cache leaks)
+# Dependencies
+# ==============================================================================
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==============================================================================
+# IDEs and Editors
+# ==============================================================================
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# ==============================================================================
+# System Files
 # ==============================================================================
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
