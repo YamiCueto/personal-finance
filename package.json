@@ -7,7 +7,9 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "e2e": "playwright test",
+    "e2e": "playwright test e2e/auth-mock.spec.ts",
+    "e2e:mock": "playwright test e2e/auth-mock.spec.ts",
+    "e2e:live": "playwright test e2e/auth.spec.ts",
     "e2e:ui": "playwright test --ui"
   },
   "private": true,
