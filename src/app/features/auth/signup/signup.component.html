@@ -1,0 +1,171 @@
+<main class="signup-viewport" role="main">
+  <div class="signup-card">
+    <header class="signup-header">
+      <div class="badge-vault" aria-label="System Identity">
+        <span class="vault-dot" aria-hidden="true"></span>
+        <span class="vault-label">Financial Control System</span>
+      </div>
+      <h1 class="vault-title">Create Vault Account</h1>
+      <p class="vault-description">
+        Establish your isolated personal ledger. Multi-user security with strict database Row Level Security.
+      </p>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="alert alert-error" role="alert" aria-live="assertive">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <div class="alert-content">
+          <strong class="alert-title">Registration Error</strong>
+          <p class="alert-text">{{ errorMessage() }}</p>
+        </div>
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="alert alert-success" role="status" aria-live="polite">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <div class="alert-content">
+          <strong class="alert-title">Success</strong>
+          <p class="alert-text">{{ successMessage() }}</p>
+        </div>
+      </div>
+    }
+
+    <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" novalidate class="signup-form">
+      <!-- Email Field -->
+      <div class="form-field">
+        <label for="email" class="field-label">Email Address</label>
+        <div class="input-wrapper">
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="name@example.com"
+            class="field-input"
+            [class.input-invalid]="email?.invalid && (email?.dirty || email?.touched)"
+            [attr.aria-invalid]="email?.invalid && (email?.dirty || email?.touched)"
+            aria-describedby="email-error"
+          />
+        </div>
+        @if (email?.invalid && (email?.dirty || email?.touched)) {
+          <p id="email-error" class="field-error" role="alert">
+            @if (email?.hasError('required')) {
+              Email address is required.
+            } @else if (email?.hasError('email')) {
+              Please enter a valid email format.
+            }
+          </p>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-field">
+        <label for="password" class="field-label">Master Password</label>
+        <div class="input-wrapper">
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="new-password"
+            placeholder="At least 8 chars, 1 letter, 1 number"
+            class="field-input"
+            [class.input-invalid]="password?.invalid && (password?.dirty || password?.touched)"
+            [attr.aria-invalid]="password?.invalid && (password?.dirty || password?.touched)"
+            aria-describedby="password-error password-hint"
+          />
+          <button
+            type="button"
+            class="btn-toggle-visibility"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            tabindex="0"
+          >
+            {{ showPassword() ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+        <p id="password-hint" class="field-hint">Must be at least 8 characters with letters and numbers.</p>
+        @if (password?.invalid && (password?.dirty || password?.touched)) {
+          <p id="password-error" class="field-error" role="alert">
+            @if (password?.hasError('required')) {
+              Password is required.
+            } @else if (password?.hasError('minlength')) {
+              Password must be at least 8 characters long.
+            } @else if (password?.hasError('passwordStrength')) {
+              Password must include at least one letter and one number.
+            }
+          </p>
+        }
+      </div>
+
+      <!-- Password Confirmation Field -->
+      <div class="form-field">
+        <label for="passwordConfirmation" class="field-label">Confirm Password</label>
+        <div class="input-wrapper">
+          <input
+            id="passwordConfirmation"
+            [type]="showConfirmation() ? 'text' : 'password'"
+            formControlName="passwordConfirmation"
+            autocomplete="new-password"
+            placeholder="Re-enter your master password"
+            class="field-input"
+            [class.input-invalid]="(passwordConfirmation?.invalid || hasPasswordMismatch) && (passwordConfirmation?.dirty || passwordConfirmation?.touched)"
+            [attr.aria-invalid]="(passwordConfirmation?.invalid || hasPasswordMismatch) && (passwordConfirmation?.dirty || passwordConfirmation?.touched)"
+            aria-describedby="confirmation-error"
+          />
+          <button
+            type="button"
+            class="btn-toggle-visibility"
+            (click)="toggleConfirmationVisibility()"
+            [attr.aria-label]="showConfirmation() ? 'Hide confirmation password' : 'Show confirmation password'"
+            tabindex="0"
+          >
+            {{ showConfirmation() ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+        @if (passwordConfirmation?.invalid && (passwordConfirmation?.dirty || passwordConfirmation?.touched)) {
+          <p id="confirmation-error" class="field-error" role="alert">
+            @if (passwordConfirmation?.hasError('required')) {
+              Please confirm your password.
+            }
+          </p>
+        } @else if (hasPasswordMismatch) {
+          <p id="confirmation-error" class="field-error" role="alert">
+            Passwords do not match.
+          </p>
+        }
+      </div>
+
+      <!-- Submit Action -->
+      <div class="form-action">
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="signupForm.invalid || isSubmitting()"
+          [attr.aria-busy]="isSubmitting()"
+        >
+          @if (isSubmitting()) {
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span>Securing Account...</span>
+          } @else {
+            <span>Create Account</span>
+          }
+        </button>
+      </div>
+    </form>
+
+    <footer class="signup-footer">
+      <p class="footer-prompt">
+        Already have a vault account?
+        <a routerLink="/auth/login" class="link-action">Sign In</a>
+      </p>
+    </footer>
+  </div>
+</main>

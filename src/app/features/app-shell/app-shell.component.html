@@ -1,0 +1,37 @@
+<main class="app-viewport" role="main">
+  <div class="shell-card">
+    <header class="shell-header">
+      <div class="badge-verified" aria-label="Security Status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-label">Protected Vault Shell</span>
+      </div>
+      <h1 class="shell-title">Authenticated Session Verified</h1>
+      <p class="shell-subtitle">
+        Protected route validation successful. Financial modules will be mounted here in subsequent phases.
+      </p>
+    </header>
+
+    <section class="identity-panel" aria-label="User Identity">
+      <div class="identity-row">
+        <span class="identity-label">Authenticated Identity:</span>
+        <span class="identity-value" data-testid="user-email">{{ user()?.email || 'Active Session' }}</span>
+      </div>
+      <div class="identity-row">
+        <span class="identity-label">User ID:</span>
+        <span class="identity-value identity-uid" data-testid="user-id">{{ user()?.id || 'Verified' }}</span>
+      </div>
+    </section>
+
+    <div class="shell-actions">
+      <button
+        type="button"
+        class="btn-signout"
+        (click)="onSignOut()"
+        aria-label="Sign out of current vault session"
+        data-testid="signout-button"
+      >
+        Sign Out of Vault
+      </button>
+    </div>
+  </div>
+</main>
