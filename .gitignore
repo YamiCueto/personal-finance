@@ -53,6 +53,10 @@ service_account.json
 testem.log
 /typings
 __screenshots__/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 
 # ==============================================================================
 # Dependencies
