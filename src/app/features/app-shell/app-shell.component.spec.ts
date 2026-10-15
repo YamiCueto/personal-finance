@@ -1,9 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { signal } from '@angular/core';
+import { LOCALE_ID, signal } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeEsCo from '@angular/common/locales/es-CO';
 import { AppShellComponent } from './app-shell.component';
 import { AuthService } from '../../core/services/auth.service';
 import { User } from '@supabase/supabase-js';
+
+import { provideFinancialCore } from '../../core/providers/financial-core.provider';
+
+registerLocaleData(localeEsCo, 'es-CO');
 
 describe('AppShellComponent', () => {
   let component: AppShellComponent;
@@ -29,7 +35,9 @@ describe('AppShellComponent', () => {
       imports: [AppShellComponent],
       providers: [
         provideRouter([]),
+        provideFinancialCore({ providerMode: 'local-demo' }),
         { provide: AuthService, useValue: mockAuthService },
+        { provide: LOCALE_ID, useValue: 'es-CO' },
       ],
     }).compileComponents();
 

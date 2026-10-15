@@ -3,7 +3,7 @@ import { Environment } from '../app/core/config/environment.model';
 export const environment: Environment = {
   production: true,
   supabase: {
-    url: 'https://vcukikhnljcmitccrqng.supabase.co',
-    publishableKey: 'SUPABASE_PUBLISHABLE_KEY_PLACEHOLDER',
+    url: 'https://hlehsgwsjphvuyngzjry.supabase.co',
+    publishableKey: 'sb_publishable_I2A5p25Tck4RsvBP96THRQ_Xvr1cYZ0',
   },
 };

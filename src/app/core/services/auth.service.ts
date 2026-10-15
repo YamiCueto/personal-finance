@@ -1,7 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthError, Session, User } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
-import { SignInResult, SignUpResult } from '../models/auth.model';
+import {
+  PasswordRecoveryResult,
+  PasswordUpdateResult,
+  SignInResult,
+  SignUpResult,
+} from '../models/auth.model';
 
 /**
  * Client-Side Authentication Service.
@@ -171,6 +176,71 @@ export class AuthService {
     } finally {
       this.currentSession.set(null);
       this.currentUser.set(null);
+    }
+  }
+
+  async resetPasswordForEmail(email: string, redirectTo?: string): Promise<PasswordRecoveryResult> {
+    try {
+      const redirectUri = redirectTo || `${window.location.origin}/auth/reset-password`;
+      const { error } = await this.supabaseService.clientInstance.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: redirectUri,
+        }
+      );
+
+      if (error) {
+        return {
+          success: false,
+          error: this.normalizeAuthError(error),
+        };
+      }
+
+      return {
+        success: true,
+      };
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to connect to authentication service. Please check your network connection.';
+      return {
+        success: false,
+        error: message,
+      };
+    }
+  }
+
+  async updateUserPassword(password: string): Promise<PasswordUpdateResult> {
+    try {
+      const { data, error } = await this.supabaseService.clientInstance.auth.updateUser({
+        password,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          user: null,
+          error: this.normalizeAuthError(error),
+        };
+      }
+
+      this.currentUser.set(data.user);
+
+      return {
+        success: true,
+        user: data.user,
+      };
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to connect to authentication service. Please check your network connection.';
+      return {
+        success: false,
+        user: null,
+        error: message,
+      };
     }
   }
 

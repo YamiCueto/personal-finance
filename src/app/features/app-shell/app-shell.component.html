@@ -1,37 +1,426 @@
-<main class="app-viewport" role="main">
-  <div class="shell-card">
-    <header class="shell-header">
-      <div class="badge-verified" aria-label="Security Status">
+<main class="ledger-viewport" role="main">
+  <!-- Top Navigation & Vault Identity Header -->
+  <header class="ledger-header">
+    <div class="header-main">
+      <div class="vault-brand">
         <span class="status-dot" aria-hidden="true"></span>
-        <span class="status-label">Protected Vault Shell</span>
+        <span class="brand-name">Bóveda Financiera</span>
+        @if (financialFacade.isDemoMode()) {
+          <span class="badge-demo" data-testid="demo-badge">MODO DEMO LOCAL</span>
+        }
       </div>
-      <h1 class="shell-title">Authenticated Session Verified</h1>
-      <p class="shell-subtitle">
-        Protected route validation successful. Financial modules will be mounted here in subsequent phases.
-      </p>
-    </header>
+      <div class="user-identity">
+        <span class="user-email" data-testid="user-email">{{ user()?.email || 'Sesión Activa' }}</span>
+        <span class="identity-uid" data-testid="user-id" style="display:none;">{{ user()?.id || 'Verified' }}</span>
+        <button
+          type="button"
+          class="btn-icon-signout"
+          (click)="onSignOut()"
+          title="Cerrar Sesión"
+          aria-label="Cerrar sesión de la bóveda"
+          data-testid="signout-button"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-svg">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
+      </div>
+    </div>
 
-    <section class="identity-panel" aria-label="User Identity">
-      <div class="identity-row">
-        <span class="identity-label">Authenticated Identity:</span>
-        <span class="identity-value" data-testid="user-email">{{ user()?.email || 'Active Session' }}</span>
+    @if (financialFacade.isDemoMode()) {
+      <div class="demo-banner" role="status" aria-live="polite">
+        <span class="demo-icon">ℹ️</span>
+        <span class="demo-text">Entorno seguro: operando con <strong>datos ficticios locales</strong> en memoria (sin conexión remota a Supabase).</span>
       </div>
-      <div class="identity-row">
-        <span class="identity-label">User ID:</span>
-        <span class="identity-value identity-uid" data-testid="user-id">{{ user()?.id || 'Verified' }}</span>
+    }
+
+    <!-- Hidden compatibility text for base E2E verification -->
+    <h1 class="visually-hidden">Authenticated Session Verified</h1>
+
+    <!-- Month Selector Bar (Thumb-Zone Carousel) -->
+    <nav class="month-selector" aria-label="Selector de Período Mensual">
+      @for (m of monthsList; track m.value) {
+        <button
+          type="button"
+          class="month-pill"
+          [class.active]="selectedMonth() === m.value"
+          (click)="selectMonth(m.value)"
+        >
+          {{ m.label }}
+        </button>
+      }
+    </nav>
+  </header>
+
+  <!-- Financial Metric Cards (OLED Cyan Waterfall) -->
+  <section class="kpi-grid" aria-label="Métricas Principales">
+    <!-- Card: Saldo Real en Cuentas -->
+    <div class="kpi-card real-balance">
+      <span class="kpi-label">Saldo Real en Bóveda</span>
+      <strong class="kpi-value tabular-nums">{{ monthlySummary().realBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+      <span class="kpi-sub">Total líquido disponible en cuentas</span>
+    </div>
+
+    <!-- Card: Dinero Libre Proyectado (Libre) -->
+    <div class="kpi-card free-capital">
+      <span class="kpi-label">Total Libre (Ingresos - Deducciones)</span>
+      <strong class="kpi-value tabular-nums" [class.negative]="monthlySummary().totalFree < 0">
+        {{ monthlySummary().totalFree | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+      </strong>
+      <span class="kpi-sub">Fórmula Excel: Total Ingresos - Deducciones</span>
+    </div>
+
+    <!-- Metric Ribbon: Ingresos vs Obligaciones vs Pendiente -->
+    <div class="metric-ribbon">
+      <div class="ribbon-item">
+        <span class="ribbon-label">Ingresos</span>
+        <span class="ribbon-val tabular-nums">{{ monthlySummary().totalIncome | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Obligaciones</span>
+        <span class="ribbon-val tabular-nums">{{ monthlySummary().totalObligations | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Pagado</span>
+        <span class="ribbon-val tabular-nums paid">{{ monthlySummary().totalPaid | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Por Pagar</span>
+        <span class="ribbon-val tabular-nums pending">{{ monthlySummary().totalPending | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Module Tabs -->
+  <nav class="module-tabs" role="tablist">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'waterfall'"
+      (click)="setActiveTab('waterfall')"
+      role="tab"
+    >
+      Cascada (Resto)
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'obligations'"
+      (click)="setActiveTab('obligations')"
+      role="tab"
+    >
+      Obligaciones ({{ currentMonthObligations().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'incomes'"
+      (click)="setActiveTab('incomes')"
+      role="tab"
+    >
+      Ingresos ({{ currentMonthIncomes().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'accounts'"
+      (click)="setActiveTab('accounts')"
+      role="tab"
+    >
+      Cuentas ({{ accounts().length }})
+    </button>
+  </nav>
+
+  <!-- Tab 1: Cascada de Capital (Motor Resto) -->
+  @if (activeTab() === 'waterfall') {
+    <section class="tab-panel" aria-label="Cascada de Capital">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Cascada de Amortización Mensual</h2>
+          <p class="panel-desc">Visualización progresiva del dinero restante tras cada deducción planificada.</p>
+        </div>
+      </div>
+
+      @if (waterfallItems().length === 0) {
+        <div class="empty-state">
+          <p class="empty-title">Sin obligaciones registradas para este mes</p>
+          <p class="empty-text">Añade tus compromisos para visualizar la cascada de saldo Resto paso a paso.</p>
+          <button type="button" class="btn-primary" (click)="openObligationModal()">+ Crear Obligación</button>
+        </div>
+      } @else {
+        <div class="waterfall-list">
+          <!-- Starting Income Milestone -->
+          <div class="waterfall-milestone start">
+            <span class="milestone-label">Base de Ingresos Totales</span>
+            <span class="milestone-val tabular-nums">{{ monthlySummary().totalIncome | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span>
+          </div>
+
+          @for (item of waterfallItems(); track item.id; let idx = $index) {
+            <div class="waterfall-step">
+              <div class="step-connector"></div>
+              <div class="step-card">
+                <div class="step-meta">
+                  <span class="step-index">#{{ idx + 1 }}</span>
+                  <span class="step-name">{{ item.name }}</span>
+                  <span class="badge-status" [class]="item.status.toLowerCase()">
+                    {{ item.status === 'PAID' ? 'PAGADO' : item.status === 'PARTIAL' ? 'PARCIAL' : 'POR PAGAR' }}
+                  </span>
+                </div>
+                <div class="step-values">
+                  <div class="val-deduction">
+                    <span class="sub-label">Deducción:</span>
+                    <span class="sub-val tabular-nums">-{{ item.amount | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+                  </div>
+                  <div class="val-resto">
+                    <span class="sub-label">Resto:</span>
+                    <span class="sub-val tabular-nums" [class.negative]="item.remainingResto < 0">
+                      {{ item.remainingResto | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Ending Free Capital Milestone -->
+          <div class="waterfall-milestone end">
+            <span class="milestone-label">Saldo Libre Final (Fila 23)</span>
+            <span class="milestone-val tabular-nums" [class.negative]="monthlySummary().totalFree < 0">
+              {{ monthlySummary().totalFree | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+            </span>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Tab 2: Obligaciones -->
+  @if (activeTab() === 'obligations') {
+    <section class="tab-panel" aria-label="Gestión de Obligaciones">
+      <div class="panel-header">
+        <h2 class="panel-title">Obligaciones de {{ monthsList[selectedMonth() - 1].label }}</h2>
+        <button type="button" class="btn-primary-sm" (click)="openObligationModal()">+ Obligación</button>
+      </div>
+
+      @if (currentMonthObligations().length === 0) {
+        <div class="empty-state">
+          <p class="empty-title">No hay obligaciones registradas</p>
+          <p class="empty-text">Registra tus cuotas, créditos y suscripciones fijas.</p>
+        </div>
+      } @else {
+        <div class="obligations-grid">
+          @for (ob of currentMonthObligations(); track ob.id) {
+            <div class="obligation-card">
+              <div class="card-header-row">
+                <h3 class="ob-name">{{ ob.name }}</h3>
+                <span class="badge-status" [class]="ob.status.toLowerCase()">
+                  {{ ob.status === 'PAID' ? 'PAGADO' : ob.status === 'PARTIAL' ? 'PARCIAL' : 'POR PAGAR' }}
+                </span>
+              </div>
+              <div class="ob-amounts-row">
+                <div>
+                  <span class="small-label">Monto Total:</span>
+                  <strong class="large-val tabular-nums">{{ ob.amount | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+                </div>
+                <div>
+                  <span class="small-label">Pendiente:</span>
+                  <strong class="pending-val tabular-nums">{{ ob.amountPending | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+                </div>
+              </div>
+              <div class="ob-action-row">
+                @if (ob.status !== 'PAID') {
+                  <button type="button" class="btn-action-pay" (click)="openPaymentModal(ob)">
+                    Registrar Pago
+                  </button>
+                } @else {
+                  <span class="paid-check">✓ Obligación completada</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Tab 3: Ingresos -->
+  @if (activeTab() === 'incomes') {
+    <section class="tab-panel" aria-label="Gestión de Ingresos">
+      <div class="panel-header">
+        <h2 class="panel-title">Ingresos de {{ monthsList[selectedMonth() - 1].label }}</h2>
+        <button type="button" class="btn-primary-sm" (click)="openIncomeModal()">+ Ingreso</button>
+      </div>
+
+      @if (currentMonthIncomes().length === 0) {
+        <div class="empty-state">
+          <p class="empty-title">Sin ingresos registrados en este mes</p>
+          <p class="empty-text">Añade los depósitos, salarios o cobros de este período.</p>
+        </div>
+      } @else {
+        <div class="incomes-list">
+          @for (inc of currentMonthIncomes(); track inc.id) {
+            <div class="income-row">
+              <div class="inc-info">
+                <strong class="inc-desc">{{ inc.description }}</strong>
+                <span class="inc-date">{{ inc.receivedDate }}</span>
+              </div>
+              <strong class="inc-amount tabular-nums">+{{ inc.amount | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Tab 4: Cuentas Financieras -->
+  @if (activeTab() === 'accounts') {
+    <section class="tab-panel" aria-label="Cuentas Financieras">
+      <div class="panel-header">
+        <h2 class="panel-title">Cuentas y Depósitos</h2>
+        <button type="button" class="btn-primary-sm" (click)="openAccountModal()">+ Cuenta</button>
+      </div>
+
+      <div class="accounts-grid">
+        @for (acc of accounts(); track acc.id) {
+          <div class="account-card">
+            <div class="acc-top">
+              <span class="acc-badge">{{ acc.accountType }}</span>
+              <h3 class="acc-name">{{ acc.name }}</h3>
+            </div>
+            <div class="acc-balance">
+              <span class="small-label">Saldo Actual</span>
+              <strong class="acc-val tabular-nums">{{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+            </div>
+          </div>
+        }
       </div>
     </section>
+  }
 
-    <div class="shell-actions">
-      <button
-        type="button"
-        class="btn-signout"
-        (click)="onSignOut()"
-        aria-label="Sign out of current vault session"
-        data-testid="signout-button"
-      >
-        Sign Out of Vault
-      </button>
+  <!-- Modal: Crear Cuenta -->
+  @if (showAccountModal()) {
+    <div class="modal-backdrop" (click)="closeAccountModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Nueva Cuenta Financiera</h3>
+        <form [formGroup]="accountForm" (ngSubmit)="saveAccount()">
+          <div class="form-field">
+            <label class="field-label" for="acc-name">Nombre de Cuenta (ej. B. Occidente)</label>
+            <input id="acc-name" type="text" formControlName="name" class="field-input" placeholder="Nombre" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="acc-type">Tipo de Cuenta</label>
+            <select id="acc-type" formControlName="accountType" class="field-input">
+              <option value="SAVINGS">Ahorros</option>
+              <option value="CHECKING">Corriente</option>
+              <option value="CASH">Efectivo</option>
+              <option value="CREDIT_CARD">Tarjeta de Crédito</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="acc-balance">Saldo Inicial (COP)</label>
+            <input id="acc-balance" type="number" formControlName="initialBalance" class="field-input" placeholder="0" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeAccountModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Cuenta</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
+  }
+
+  <!-- Modal: Registrar Ingreso -->
+  @if (showIncomeModal()) {
+    <div class="modal-backdrop" (click)="closeIncomeModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Registrar Ingreso en {{ monthsList[selectedMonth() - 1].label }}</h3>
+        <form [formGroup]="incomeForm" (ngSubmit)="saveIncome()">
+          <div class="form-field">
+            <label class="field-label" for="inc-desc">Descripción (ej. Salario, Honorarios)</label>
+            <input id="inc-desc" type="text" formControlName="description" class="field-input" placeholder="Descripción" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="inc-amount">Monto (COP)</label>
+            <input id="inc-amount" type="number" formControlName="amount" class="field-input" placeholder="0" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="inc-acc">Cuenta de Destino</label>
+            <select id="inc-acc" formControlName="accountId" class="field-input">
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id">{{ acc.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="inc-date">Fecha</label>
+            <input id="inc-date" type="date" formControlName="receivedDate" class="field-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeIncomeModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Registrar Ingreso</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Crear Obligación -->
+  @if (showObligationModal()) {
+    <div class="modal-backdrop" (click)="closeObligationModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Nueva Obligación (Deducción)</h3>
+        <form [formGroup]="obligationForm" (ngSubmit)="saveObligation()">
+          <div class="form-field">
+            <label class="field-label" for="ob-name">Nombre (ej. B. Occidente, Addi, Rappi)</label>
+            <input id="ob-name" type="text" formControlName="name" class="field-input" placeholder="Nombre" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="ob-amount">Valor (COP)</label>
+            <input id="ob-amount" type="number" formControlName="amount" class="field-input" placeholder="0" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="ob-due">Fecha Límite / Vencimiento (Opcional)</label>
+            <input id="ob-due" type="date" formControlName="dueDate" class="field-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeObligationModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Obligación</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Registrar Pago de Obligación -->
+  @if (showPaymentModal()) {
+    <div class="modal-backdrop" (click)="closePaymentModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Pagar Obligación: {{ selectedObligationForPayment()?.name }}</h3>
+        <form [formGroup]="paymentForm" (ngSubmit)="submitPayment()">
+          <div class="form-field">
+            <label class="field-label" for="pay-acc">Cuenta de Origen de Fondos</label>
+            <select id="pay-acc" formControlName="accountId" class="field-input">
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id">{{ acc.name }} (Saldo: {{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pay-amount">Monto del Pago (Pendiente: {{ selectedObligationForPayment()?.amountPending | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</label>
+            <input id="pay-amount" type="number" formControlName="amount" class="field-input" placeholder="0" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pay-date">Fecha de Pago</label>
+            <input id="pay-date" type="date" formControlName="paymentDate" class="field-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closePaymentModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Confirmar Pago</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </main>

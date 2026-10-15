@@ -117,4 +117,32 @@ describe('AuthService', () => {
     expect(service.currentSession()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
   });
+
+  it('should call resetPasswordForEmail with trimmed email and default redirect', async () => {
+    (mockSupabaseService.clientInstance as any).auth.resetPasswordForEmail = vi
+      .fn()
+      .mockResolvedValue({ error: null });
+
+    const result = await service.resetPasswordForEmail('  test@example.com  ');
+
+    expect(result.success).toBe(true);
+    expect(
+      (mockSupabaseService.clientInstance as any).auth.resetPasswordForEmail
+    ).toHaveBeenCalledWith('test@example.com', {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+  });
+
+  it('should call updateUser with new password', async () => {
+    const updatedUser = { id: 'usr-123', email: 'user@example.com' };
+    (mockSupabaseService.clientInstance as any).auth.updateUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: updatedUser }, error: null });
+
+    const result = await service.updateUserPassword('NewPassword123!');
+
+    expect(result.success).toBe(true);
+    expect(result.user).toEqual(updatedUser as any);
+    expect(service.currentUser()).toEqual(updatedUser as any);
+  });
 });

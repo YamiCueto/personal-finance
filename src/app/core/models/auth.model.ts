@@ -20,3 +20,14 @@ export interface SignInResult {
   readonly session: Session | null;
   readonly error?: string;
 }
+
+export interface PasswordRecoveryResult {
+  readonly success: boolean;
+  readonly error?: string;
+}
+
+export interface PasswordUpdateResult {
+  readonly success: boolean;
+  readonly user: User | null;
+  readonly error?: string;
+}

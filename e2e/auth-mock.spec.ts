@@ -8,6 +8,10 @@ import {
   mockSignupSuccess,
   mockSignupFailure,
   mockNetworkFailure,
+  mockPasswordRecoverySuccess,
+  mockPasswordRecoveryRateLimit,
+  mockPasswordUpdateSuccess,
+  mockPasswordUpdateFailure,
   injectAuthenticatedSession,
   injectExpiredSession,
 } from './helpers/auth-mocks';
@@ -312,8 +316,65 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     }
   });
 
-  test('zero horizontal overflow across all core viewport configurations', async ({ page }) => {
-    for (const route of ['/auth/login', '/auth/signup']) {
+  test('forgot password link navigates from login to /auth/forgot-password', async ({ page }) => {
+    await page.goto('/auth/login');
+    await page.getByRole('link', { name: /forgot your password/i }).click();
+
+    await expect(page).toHaveURL(/\/auth\/forgot-password/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset Vault Password');
+  });
+
+  test('forgot password form dispatches recovery request and displays polite notice', async ({ page }) => {
+    await mockPasswordRecoverySuccess(page);
+
+    await page.goto('/auth/forgot-password');
+    await page.locator('#recovery-email').fill('operative@personalfinance.vault');
+    await page.getByRole('button', { name: /send recovery link/i }).click();
+
+    const alert = page.locator('.alert.alert-success');
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(/password recovery instructions have been dispatched/i);
+  });
+
+  test('forgot password rate limit error displays rate limit warning banner', async ({ page }) => {
+    await mockPasswordRecoveryRateLimit(page);
+
+    await page.goto('/auth/forgot-password');
+    await page.locator('#recovery-email').fill('operative@personalfinance.vault');
+    await page.getByRole('button', { name: /send recovery link/i }).click();
+
+    const alert = page.locator('.alert.alert-error');
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(/rate limit/i);
+  });
+
+  test('reset password displays expired link warning when opened without recovery session', async ({ page }) => {
+    await page.goto('/auth/reset-password');
+
+    const alert = page.locator('.alert.alert-error');
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(/invalid or has expired/i);
+    await expect(page.getByRole('link', { name: /request new recovery link/i })).toBeVisible();
+  });
+
+  test('reset password updates password successfully when authenticated via recovery session', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await mockPasswordUpdateSuccess(page, MOCK_USER_A);
+
+    await page.goto('/auth/reset-password');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Set New Password');
+
+    await page.locator('#new-password').fill('UpdatedPass123!');
+    await page.locator('#new-password-confirmation').fill('UpdatedPass123!');
+    await page.getByRole('button', { name: /update master password/i }).click();
+
+    const alert = page.locator('.alert.alert-success');
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(/updated successfully/i);
+  });
+
+  test('zero horizontal overflow across all core viewport configurations including authenticated app shell', async ({ page }) => {
+    for (const route of ['/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/reset-password']) {
       await page.goto(route);
       const { scrollWidth, clientWidth } = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
@@ -321,5 +382,16 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
       }));
       expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
     }
+
+    // Validar app shell autenticada con datos demo
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+    await expect(page.locator('[data-testid="demo-badge"]')).toBeVisible();
+    await expect(page.locator('.kpi-card.real-balance')).toBeVisible();
   });
 });

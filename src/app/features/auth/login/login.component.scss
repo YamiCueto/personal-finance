@@ -205,6 +205,33 @@
   font-weight: 500;
 }
 
+.form-assist {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.25rem;
+  margin-bottom: 0.75rem;
+
+  .link-assist {
+    color: #38bdf8;
+    font-size: 0.8125rem;
+    text-decoration: none;
+    font-weight: 500;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+}
+
 .form-action {
   margin-top: 0.5rem;
 }
