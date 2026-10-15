@@ -1,6 +1,4 @@
-# EditorConfig helps maintain consistent coding styles across different editors and IDEs
-# https://editorconfig.org
-
+# Editor configuration, see https://editorconfig.org
 root = true
 
 [*]
@@ -11,5 +9,10 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
+[*.ts]
+quote_type = single
+ij_typescript_use_double_quotes = false
+
 [*.md]
+max_line_length = off
 trim_trailing_whitespace = false

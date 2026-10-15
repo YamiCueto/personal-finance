@@ -1,0 +1,113 @@
+<main class="login-viewport" role="main">
+  <div class="login-card">
+    <header class="login-header">
+      <div class="badge-vault" aria-label="System Identity">
+        <span class="vault-dot" aria-hidden="true"></span>
+        <span class="vault-label">Financial Control System</span>
+      </div>
+      <h1 class="vault-title">Access Vault</h1>
+      <p class="vault-description">
+        Enter your credentials to unlock your isolated personal financial ledger.
+      </p>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="alert alert-error" role="alert" aria-live="assertive">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <div class="alert-content">
+          <strong class="alert-title">Authentication Failed</strong>
+          <p class="alert-text">{{ errorMessage() }}</p>
+        </div>
+      </div>
+    }
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate class="login-form">
+      <!-- Email Field -->
+      <div class="form-field">
+        <label for="login-email" class="field-label">Email Address</label>
+        <div class="input-wrapper">
+          <input
+            id="login-email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="name@example.com"
+            class="field-input"
+            [class.input-invalid]="email?.invalid && (email?.dirty || email?.touched)"
+            [attr.aria-invalid]="email?.invalid && (email?.dirty || email?.touched)"
+            aria-describedby="login-email-error"
+          />
+        </div>
+        @if (email?.invalid && (email?.dirty || email?.touched)) {
+          <p id="login-email-error" class="field-error" role="alert">
+            @if (email?.hasError('required')) {
+              Email address is required.
+            } @else if (email?.hasError('email')) {
+              Please enter a valid email format.
+            }
+          </p>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-field">
+        <label for="login-password" class="field-label">Password</label>
+        <div class="input-wrapper">
+          <input
+            id="login-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            placeholder="Enter your master password"
+            class="field-input"
+            [class.input-invalid]="password?.invalid && (password?.dirty || password?.touched)"
+            [attr.aria-invalid]="password?.invalid && (password?.dirty || password?.touched)"
+            aria-describedby="login-password-error"
+          />
+          <button
+            type="button"
+            class="btn-toggle-visibility"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            tabindex="0"
+          >
+            {{ showPassword() ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+        @if (password?.invalid && (password?.dirty || password?.touched)) {
+          <p id="login-password-error" class="field-error" role="alert">
+            Password is required.
+          </p>
+        }
+      </div>
+
+      <!-- Submit Action -->
+      <div class="form-action">
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="loginForm.invalid || isSubmitting()"
+          [attr.aria-busy]="isSubmitting()"
+        >
+          @if (isSubmitting()) {
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span>Verifying Credentials...</span>
+          } @else {
+            <span>Sign In to Vault</span>
+          }
+        </button>
+      </div>
+    </form>
+
+    <footer class="login-footer">
+      <p class="footer-prompt">
+        Don't have a vault yet?
+        <a routerLink="/auth/signup" class="link-action">Create Vault Account</a>
+      </p>
+    </footer>
+  </div>
+</main>
