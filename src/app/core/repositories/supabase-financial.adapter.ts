@@ -6,10 +6,13 @@ import {
   CreditProduct,
   PeriodObligation,
   Income,
+  CreditCardPurchase,
 } from '../models/financial-v2.model';
 import {
   CreateAccountDTO,
   CreateCreditProductDTO,
+  CreateCreditCardPurchaseDTO,
+  GenerateInstallmentDTO,
   CreateIncomeDTO,
   CreateObligationDTO,
   FinancialOperationResult,
@@ -203,6 +206,21 @@ export class SupabaseFinancialAdapter
       newBalance: data.new_principal_balance,
       message: 'Reestructuración aplicada exitosamente',
     };
+  }
+
+  async getCreditCardPurchases(userId: string, creditCardId?: string): Promise<CreditCardPurchase[]> {
+    // Pendiente: requiere migración de esquema para credit_card_purchases en Supabase
+    throw new Error('getCreditCardPurchases no está soportado en el esquema remoto actual. Operación diferida a fase de migración SQL.');
+  }
+
+  async createCreditCardPurchase(userId: string, dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase> {
+    // Pendiente: requiere migración de esquema para credit_card_purchases en Supabase
+    throw new Error('createCreditCardPurchase no está soportado en el esquema remoto actual. Operación diferida a fase de migración SQL.');
+  }
+
+  async generateCreditInstallmentObligation(userId: string, dto: GenerateInstallmentDTO): Promise<PeriodObligation> {
+    // Pendiente: requiere función RPC o migración de generación automática en Supabase remoto
+    throw new Error('generateCreditInstallmentObligation no está soportado en el esquema remoto actual. Operación diferida a fase de migración SQL.');
   }
 
   // --- REPOSITORIO DE OBLIGACIONES Y PAGOS RPC ---

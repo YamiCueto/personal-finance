@@ -4,6 +4,10 @@ import {
   CreditProduct,
   PeriodObligation,
   Income,
+  CreditCardPurchase,
+  AmortizationScheduleItem,
+  PrepaymentSimulationResult,
+  RedeferredSimulationResult,
 } from '../models/financial-v2.model';
 import { FinancialAccountsService } from '../services/financial-accounts.service';
 import { CreditProductsService } from '../services/credit-products.service';
@@ -14,6 +18,9 @@ import { FINANCIAL_CONFIG } from '../config/financial.config';
 import { FinancialCalculatorV2 } from '../services/financial-calculator-v2';
 import {
   CreateAccountDTO,
+  CreateCreditProductDTO,
+  CreateCreditCardPurchaseDTO,
+  GenerateInstallmentDTO,
   CreateIncomeDTO,
   CreateObligationDTO,
   FinancialOperationResult,
@@ -50,6 +57,7 @@ export class FinancialFacade {
   });
   readonly accounts = signal<FinancialAccount[]>([]);
   readonly creditProducts = signal<CreditProduct[]>([]);
+  readonly creditCardPurchases = signal<CreditCardPurchase[]>([]);
   readonly periodObligations = signal<PeriodObligation[]>([]);
   readonly incomes = signal<Income[]>([]);
 
@@ -174,6 +182,103 @@ export class FinancialFacade {
   });
 
   /**
+   * Créditos Tradicionales (Préstamos vehiculares, hipotecarios, consumo, libranza).
+   */
+  readonly loans = computed<CreditProduct[]>(() => {
+    return this.creditProducts().filter((c) => c.type !== 'CREDIT_CARD');
+  });
+
+  /**
+   * Tarjetas de Crédito Activas.
+   */
+  readonly creditCards = computed<CreditProduct[]>(() => {
+    return this.creditProducts().filter((c) => c.type === 'CREDIT_CARD');
+  });
+
+  readonly activeLoansCount = computed<number>(() => {
+    return this.loans().filter((c) => c.status === 'ACTIVE' || c.status === 'RESTRUCTURED').length;
+  });
+
+  readonly activeCreditCardsCount = computed<number>(() => {
+    return this.creditCards().filter((c) => c.status === 'ACTIVE').length;
+  });
+
+  readonly totalApprovedCreditLimit = computed<number>(() => {
+    return this.creditCards()
+      .filter((c) => c.status === 'ACTIVE')
+      .reduce((sum, c) => {
+        return FinancialCalculatorV2.fromCents(
+          FinancialCalculatorV2.toCents(sum) + FinancialCalculatorV2.toCents(c.approvedCreditLimit || 0)
+        );
+      }, 0);
+  });
+
+  readonly totalUsedCreditLimit = computed<number>(() => {
+    return this.creditCards()
+      .filter((c) => c.status === 'ACTIVE')
+      .reduce((sum, c) => {
+        return FinancialCalculatorV2.fromCents(
+          FinancialCalculatorV2.toCents(sum) + FinancialCalculatorV2.toCents(c.usedCreditLimit || c.currentPrincipalBalance || 0)
+        );
+      }, 0);
+  });
+
+  readonly totalAvailableCreditLimit = computed<number>(() => {
+    return this.creditCards()
+      .filter((c) => c.status === 'ACTIVE')
+      .reduce((sum, c) => {
+        const approved = c.approvedCreditLimit || 0;
+        const used = c.usedCreditLimit ?? c.currentPrincipalBalance ?? 0;
+        const avail = c.availableCreditLimit ?? Math.max(0, approved - used);
+        return FinancialCalculatorV2.fromCents(
+          FinancialCalculatorV2.toCents(sum) + FinancialCalculatorV2.toCents(avail)
+        );
+      }, 0);
+  });
+
+  readonly loansPrincipalDebt = computed<number>(() => {
+    return this.loans()
+      .filter((c) => c.status === 'ACTIVE' || c.status === 'RESTRUCTURED')
+      .reduce((sum, c) => {
+        return FinancialCalculatorV2.fromCents(
+          FinancialCalculatorV2.toCents(sum) + FinancialCalculatorV2.toCents(c.currentPrincipalBalance)
+        );
+      }, 0);
+  });
+
+  readonly cardsPrincipalDebt = computed<number>(() => {
+    return this.creditCards()
+      .filter((c) => c.status === 'ACTIVE')
+      .reduce((sum, c) => {
+        return FinancialCalculatorV2.fromCents(
+          FinancialCalculatorV2.toCents(sum) + FinancialCalculatorV2.toCents(c.currentPrincipalBalance)
+        );
+      }, 0);
+  });
+
+  readonly totalProjectedInterest = computed<number>(() => {
+    return this.loans()
+      .filter((c) => c.status === 'ACTIVE' || c.status === 'RESTRUCTURED')
+      .reduce((sum, loan) => {
+        if (loan.nominalRateMonthly <= 0 || loan.currentPrincipalBalance <= 0) return sum;
+        const remaining = loan.remainingInstallments || loan.totalInstallments || 12;
+        const schedule = loan.amortizationMethod === 'GERMAN'
+          ? FinancialCalculatorV2.generateGermanAmortizationSchedule(loan.currentPrincipalBalance, loan.nominalRateMonthly, remaining, 0)
+          : FinancialCalculatorV2.generateFrenchAmortizationSchedule(loan.currentPrincipalBalance, loan.nominalRateMonthly, remaining, 0);
+        const interestSum = schedule.reduce((acc, item) => acc + item.interestPayment, 0);
+        return FinancialCalculatorV2.fromCents(
+          FinancialCalculatorV2.toCents(sum) + FinancialCalculatorV2.toCents(interestSum)
+        );
+      }, 0);
+  });
+
+  readonly upcomingDueDates = computed<PeriodObligation[]>(() => {
+    return this.periodObligations()
+      .filter((o) => o.status !== 'PAID' && o.status !== 'CANCELLED' && !!o.dueDate)
+      .sort((a, b) => (a.dueDate! > b.dueDate! ? 1 : -1));
+  });
+
+  /**
    * Carga todo el conjunto de datos financieros para el período seleccionado.
    */
   async loadPeriodData(period?: SelectedPeriod): Promise<void> {
@@ -186,17 +291,19 @@ export class FinancialFacade {
     this.errorMessage.set(null);
 
     try {
-      const [accs, credits, obs, incs] = await Promise.all([
+      const [accs, credits, obs, incs, purchases] = await Promise.all([
         this.accountsService.getAccounts(),
         this.creditsService.getCreditProducts(),
         this.obligationsService.getPeriodObligations(year, month),
         this.incomesService.getIncomes(year, month),
+        this.creditsService.getCreditCardPurchases(),
       ]);
 
       this.accounts.set(accs);
       this.creditProducts.set(credits);
       this.periodObligations.set(obs);
       this.incomes.set(incs);
+      this.creditCardPurchases.set(purchases);
     } catch (err: any) {
       const msg = err?.message || 'Error al cargar los datos financieros';
       this.errorMessage.set(msg);
@@ -247,6 +354,78 @@ export class FinancialFacade {
     const res = await this.operationsService.recordTransfer(dto);
     await this.loadPeriodData();
     return res;
+  }
+
+  async createCreditProduct(dto: CreateCreditProductDTO): Promise<CreditProduct> {
+    const cred = await this.creditsService.createCreditProduct(dto);
+    await this.loadPeriodData();
+    return cred;
+  }
+
+  async createCreditCardPurchase(dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase> {
+    const pur = await this.creditsService.createCreditCardPurchase(dto);
+    await this.loadPeriodData();
+    return pur;
+  }
+
+  async generateCreditInstallment(dto: GenerateInstallmentDTO): Promise<PeriodObligation> {
+    const ob = await this.creditsService.generateCreditInstallmentObligation(dto);
+    await this.loadPeriodData();
+    return ob;
+  }
+
+  getAmortizationSchedule(credit: CreditProduct): AmortizationScheduleItem[] {
+    const method = credit.amortizationMethod || 'FRENCH';
+    const ins = credit.associatedInsurancesMonthly || 0;
+    const installments = credit.remainingInstallments || credit.totalInstallments || 12;
+    if (method === 'GERMAN') {
+      return FinancialCalculatorV2.generateGermanAmortizationSchedule(
+        credit.currentPrincipalBalance,
+        credit.nominalRateMonthly,
+        installments,
+        ins
+      );
+    }
+    return FinancialCalculatorV2.generateFrenchAmortizationSchedule(
+      credit.currentPrincipalBalance,
+      credit.nominalRateMonthly,
+      installments,
+      ins
+    );
+  }
+
+  simulatePrepayment(
+    currentPrincipal: number,
+    effectiveAnnualRate: number,
+    remainingInstallments: number,
+    prepaymentAmount: number,
+    strategy: 'REDUCE_TERM' | 'REDUCE_INSTALLMENT',
+    associatedInsurance = 0
+  ): PrepaymentSimulationResult {
+    return FinancialCalculatorV2.simulatePrepayment(
+      currentPrincipal,
+      effectiveAnnualRate,
+      remainingInstallments,
+      prepaymentAmount,
+      strategy,
+      associatedInsurance
+    );
+  }
+
+  simulateRedeferred(
+    currentPrincipal: number,
+    currentEa: number,
+    currentRemainingInstallments: number,
+    proposedEa: number,
+    proposedInstallments: number
+  ): RedeferredSimulationResult {
+    return FinancialCalculatorV2.simulateRedeferred(
+      currentPrincipal,
+      currentEa,
+      currentRemainingInstallments,
+      proposedEa,
+      proposedInstallments
+    );
   }
 
   /**

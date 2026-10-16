@@ -7,10 +7,13 @@ import {
   Income,
   ObligationPayment,
   InternalAccountTransfer,
+  CreditCardPurchase,
 } from '../models/financial-v2.model';
 import {
   CreateAccountDTO,
   CreateCreditProductDTO,
+  CreateCreditCardPurchaseDTO,
+  GenerateInstallmentDTO,
   CreateIncomeDTO,
   CreateObligationDTO,
   FinancialOperationResult,
@@ -56,6 +59,7 @@ export class LocalFinancialAdapter
   private incomesMap = new Map<string, Income[]>();
   private paymentsMap = new Map<string, ObligationPayment[]>();
   private transfersMap = new Map<string, InternalAccountTransfer[]>();
+  private creditCardPurchasesMap = new Map<string, CreditCardPurchase[]>();
 
   // Caché de idempotencia en memoria: user_id:key -> FinancialOperationResult
   private idempotencyStore = new Map<string, { result: FinancialOperationResult; payload: any }>();
@@ -120,6 +124,7 @@ export class LocalFinancialAdapter
     };
     this.accountsMap.set(userId, [acc1, acc2]);
 
+    // Crédito A: Tasa positiva, plazo definido y amortización francesa
     const credit1: CreditProduct = {
       id: 'credit-vehiculo-01',
       userId,
@@ -137,10 +142,149 @@ export class LocalFinancialAdapter
       amortizationMethod: 'FRENCH',
       associatedInsurancesMonthly: 45000.0,
       managementFeeMonthly: 0.0,
+      paymentDueDay: 15,
       createdAt: now,
       updatedAt: now,
     };
-    this.creditProductsMap.set(userId, [credit1]);
+
+    // Crédito B: Tasa cero para comprobar casos límite
+    const credit2: CreditProduct = {
+      id: 'credit-educativo-02',
+      userId,
+      institutionId: inst1.id,
+      name: 'Crédito Educativo Convenio 0%',
+      type: 'CONSUMER_LOAN',
+      status: 'ACTIVE',
+      originalPrincipal: 6000000.0,
+      currentPrincipalBalance: 4000000.0,
+      nominalRateMonthly: 0.0,
+      effectiveAnnualRate: 0.0,
+      totalInstallments: 12,
+      remainingInstallments: 8,
+      capitalizationPeriod: 'MONTHLY',
+      amortizationMethod: 'FRENCH',
+      associatedInsurancesMonthly: 0.0,
+      managementFeeMonthly: 0.0,
+      paymentDueDay: 20,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Tarjeta A: Varias compras con diferentes cuotas
+    const card1: CreditProduct = {
+      id: 'card-visa-platinum-01',
+      userId,
+      institutionId: inst1.id,
+      name: 'Tarjeta Visa Platinum',
+      type: 'CREDIT_CARD',
+      status: 'ACTIVE',
+      approvedCreditLimit: 10000000.0,
+      usedCreditLimit: 4850000.0,
+      availableCreditLimit: 5150000.0,
+      originalPrincipal: 6450000.0,
+      currentPrincipalBalance: 4850000.0,
+      nominalRateMonthly: 2.15,
+      effectiveAnnualRate: 29.12,
+      statementCutoffDay: 18,
+      paymentDueDay: 5,
+      capitalizationPeriod: 'MONTHLY',
+      associatedInsurancesMonthly: 0.0,
+      managementFeeMonthly: 28500.0,
+      amortizationMethod: 'FRENCH',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Tarjeta B: Cupo parcialmente utilizado
+    const card2: CreditProduct = {
+      id: 'card-mastercard-black-02',
+      userId,
+      institutionId: inst2.id,
+      name: 'Tarjeta Mastercard Black',
+      type: 'CREDIT_CARD',
+      status: 'ACTIVE',
+      approvedCreditLimit: 15000000.0,
+      usedCreditLimit: 2666666.67,
+      availableCreditLimit: 12333333.33,
+      originalPrincipal: 3200000.0,
+      currentPrincipalBalance: 2666666.67,
+      nominalRateMonthly: 2.05,
+      effectiveAnnualRate: 27.53,
+      statementCutoffDay: 25,
+      paymentDueDay: 12,
+      capitalizationPeriod: 'MONTHLY',
+      associatedInsurancesMonthly: 0.0,
+      managementFeeMonthly: 35000.0,
+      amortizationMethod: 'FRENCH',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.creditProductsMap.set(userId, [credit1, credit2, card1, card2]);
+
+    const initialPurchases: CreditCardPurchase[] = [
+      {
+        id: 'pur-macbook-01',
+        productId: card1.id,
+        userId,
+        purchaseDate: '2026-01-15',
+        description: 'MacBook Pro Trabajo',
+        originalAmount: 4800000.0,
+        totalInstallments: 24,
+        remainingInstallments: 18,
+        interestRateMonthly: 2.15,
+        monthlyCapital: 200000.0,
+        monthlyInterest: 103200.0,
+        status: 'PENDING',
+        createdAt: now,
+      },
+      {
+        id: 'pur-supermercado-02',
+        productId: card1.id,
+        userId,
+        purchaseDate: '2026-05-02',
+        description: 'Mercado Mensual Supermercado',
+        originalAmount: 450000.0,
+        totalInstallments: 1,
+        remainingInstallments: 1,
+        interestRateMonthly: 0.0,
+        monthlyCapital: 450000.0,
+        monthlyInterest: 0.0,
+        status: 'PENDING',
+        createdAt: now,
+      },
+      {
+        id: 'pur-certificacion-03',
+        productId: card1.id,
+        userId,
+        purchaseDate: '2026-03-10',
+        description: 'Curso Certificación Cloud',
+        originalAmount: 1200000.0,
+        totalInstallments: 6,
+        remainingInstallments: 4,
+        interestRateMonthly: 2.15,
+        monthlyCapital: 200000.0,
+        monthlyInterest: 25800.0,
+        status: 'PENDING',
+        createdAt: now,
+      },
+      {
+        id: 'pur-vuelos-04',
+        productId: card2.id,
+        userId,
+        purchaseDate: '2026-02-20',
+        description: 'Tiquetes Aéreos Congreso',
+        originalAmount: 3200000.0,
+        totalInstallments: 12,
+        remainingInstallments: 10,
+        interestRateMonthly: 2.05,
+        monthlyCapital: 266666.67,
+        monthlyInterest: 65600.0,
+        status: 'PENDING',
+        createdAt: now,
+      },
+    ];
+    this.creditCardPurchasesMap.set(userId, initialPurchases);
 
     // 1. Semilla de compatibilidad fija para pruebas y regresión en 2026-05
     const ob1_2026: PeriodObligation = {
@@ -339,6 +483,7 @@ export class LocalFinancialAdapter
     this.institutionsMap.clear();
     this.accountsMap.clear();
     this.creditProductsMap.clear();
+    this.creditCardPurchasesMap.clear();
     this.periodObligationsMap.clear();
     this.incomesMap.clear();
     this.paymentsMap.clear();
@@ -350,6 +495,7 @@ export class LocalFinancialAdapter
     this.institutionsMap.delete(userId);
     this.accountsMap.delete(userId);
     this.creditProductsMap.delete(userId);
+    this.creditCardPurchasesMap.delete(userId);
     this.periodObligationsMap.delete(userId);
     this.incomesMap.delete(userId);
     this.paymentsMap.delete(userId);
@@ -458,28 +604,53 @@ export class LocalFinancialAdapter
   }
 
   async createCreditProduct(userId: string, dto: CreateCreditProductDTO): Promise<CreditProduct> {
-    if (dto.originalPrincipal <= 0) {
-      throw new Error('El capital del crédito debe ser mayor a 0');
+    this.ensureUserInitialized(userId);
+    if (!dto.name || dto.name.trim() === '') {
+      throw new Error('El nombre del producto de crédito es obligatorio');
     }
+    if (dto.nominalRateMonthly < 0 || dto.effectiveAnnualRate < 0) {
+      throw new Error('Las tasas de interés no pueden ser negativas');
+    }
+
+    const isCard = dto.type === 'CREDIT_CARD';
+    if (isCard) {
+      if (!dto.approvedCreditLimit || dto.approvedCreditLimit <= 0) {
+        throw new Error('El cupo aprobado de la tarjeta de crédito debe ser mayor a 0');
+      }
+    } else {
+      if (dto.originalPrincipal <= 0) {
+        throw new Error('El capital del crédito debe ser mayor a 0');
+      }
+    }
+
+    const principal = dto.originalPrincipal || 0;
+    const approvedLimit = dto.approvedCreditLimit;
+    const usedLimit = isCard ? principal : undefined;
+    const availableLimit = isCard && approvedLimit !== undefined ? Math.max(0, approvedLimit - principal) : undefined;
+
     const list = this.creditProductsMap.get(userId) || [];
     const credit: CreditProduct = {
-      id: 'credit-' + Date.now(),
+      id: (isCard ? 'card-' : 'credit-') + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       userId,
       institutionId: dto.institutionId,
       name: dto.name.trim(),
       type: dto.type,
       status: 'ACTIVE',
-      originalPrincipal: dto.originalPrincipal,
-      currentPrincipalBalance: dto.originalPrincipal,
+      originalPrincipal: principal,
+      currentPrincipalBalance: principal,
       nominalRateMonthly: dto.nominalRateMonthly,
       effectiveAnnualRate: dto.effectiveAnnualRate,
       totalInstallments: dto.totalInstallments || 12,
-      remainingInstallments: dto.totalInstallments || 12,
+      remainingInstallments: dto.remainingInstallments ?? dto.totalInstallments ?? 12,
       capitalizationPeriod: 'MONTHLY',
       amortizationMethod: dto.amortizationMethod || 'FRENCH',
       associatedInsurancesMonthly: dto.associatedInsurancesMonthly || 0,
-      managementFeeMonthly: 0,
-      approvedCreditLimit: dto.approvedCreditLimit,
+      managementFeeMonthly: dto.managementFeeMonthly || 0,
+      approvedCreditLimit: approvedLimit,
+      usedCreditLimit: usedLimit,
+      availableCreditLimit: availableLimit,
+      statementCutoffDay: dto.statementCutoffDay,
+      paymentDueDay: dto.paymentDueDay,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -512,6 +683,185 @@ export class LocalFinancialAdapter
       newBalance: dto.newPrincipalBalance,
       message: 'Reestructuración aplicada exitosamente',
     };
+  }
+
+  async getCreditCardPurchases(userId: string, creditCardId?: string): Promise<CreditCardPurchase[]> {
+    this.ensureUserInitialized(userId);
+    const list = this.creditCardPurchasesMap.get(userId) || [];
+    if (creditCardId) {
+      return list.filter((p) => p.productId === creditCardId);
+    }
+    return [...list];
+  }
+
+  async createCreditCardPurchase(userId: string, dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase> {
+    this.ensureUserInitialized(userId);
+    if (dto.amount <= 0) {
+      throw new Error('El valor de la compra debe ser mayor a 0');
+    }
+    if (dto.totalInstallments < 1) {
+      throw new Error('El número de cuotas debe ser como mínimo 1');
+    }
+    if (!dto.description || dto.description.trim() === '') {
+      throw new Error('La descripción de la compra es obligatoria');
+    }
+
+    const credits = this.creditProductsMap.get(userId) || [];
+    const card = credits.find((c) => c.id === dto.creditCardId);
+    if (!card) {
+      throw new Error('Tarjeta de crédito no encontrada');
+    }
+    if (card.type !== 'CREDIT_CARD') {
+      throw new Error('El producto especificado no es una tarjeta de crédito');
+    }
+
+    // Regla de integridad: No permitir compras superiores al cupo disponible
+    const available = card.availableCreditLimit ?? ((card.approvedCreditLimit || 0) - (card.usedCreditLimit || 0));
+    if (dto.amount > available) {
+      throw new Error(`Fondos insuficientes: el monto ${dto.amount} supera el cupo disponible de la tarjeta (${available})`);
+    }
+
+    const rate = dto.interestRateMonthly !== undefined ? dto.interestRateMonthly : card.nominalRateMonthly;
+    const monthlyCap = FinancialCalculatorV2.roundMoney(dto.amount / dto.totalInstallments);
+    const monthlyInt = rate > 0 ? FinancialCalculatorV2.roundMoney(dto.amount * (rate / 100)) : 0;
+
+    const purchase: CreditCardPurchase = {
+      id: 'pur-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      productId: card.id,
+      userId,
+      purchaseDate: dto.purchaseDate || new Date().toISOString().substring(0, 10),
+      description: dto.description.trim(),
+      originalAmount: dto.amount,
+      totalInstallments: dto.totalInstallments,
+      remainingInstallments: dto.totalInstallments,
+      interestRateMonthly: rate,
+      monthlyCapital: monthlyCap,
+      monthlyInterest: monthlyInt,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+    };
+
+    const purchasesList = this.creditCardPurchasesMap.get(userId) || [];
+    this.creditCardPurchasesMap.set(userId, [...purchasesList, purchase]);
+
+    // Actualizar cupo utilizado y disponible
+    card.usedCreditLimit = FinancialCalculatorV2.fromCents(
+      FinancialCalculatorV2.toCents(card.usedCreditLimit || 0) + FinancialCalculatorV2.toCents(dto.amount)
+    );
+    card.availableCreditLimit = FinancialCalculatorV2.fromCents(
+      FinancialCalculatorV2.toCents(card.approvedCreditLimit || 0) - FinancialCalculatorV2.toCents(card.usedCreditLimit)
+    );
+    card.currentPrincipalBalance = card.usedCreditLimit;
+    card.updatedAt = new Date().toISOString();
+
+    return purchase;
+  }
+
+  async generateCreditInstallmentObligation(userId: string, dto: GenerateInstallmentDTO): Promise<PeriodObligation> {
+    this.ensureUserInitialized(userId);
+    const credits = this.creditProductsMap.get(userId) || [];
+    const product = credits.find((c) => c.id === dto.creditProductId);
+    if (!product) {
+      throw new Error('Producto de crédito no encontrado');
+    }
+
+    // Regla de integridad: No generar dos veces la misma cuota del mismo período (idempotente)
+    const existingObs = this.periodObligationsMap.get(userId) || [];
+    const existing = existingObs.find(
+      (o) => o.creditProductId === dto.creditProductId && o.periodYear === dto.periodYear && o.periodMonth === dto.periodMonth
+    );
+    if (existing) {
+      return existing;
+    }
+
+    let obName = '';
+    let totalAmount = 0;
+    let capitalComp = 0;
+    let interestComp = 0;
+    let insuranceComp = 0;
+    let feesComp = 0;
+
+    if (product.type === 'CREDIT_CARD') {
+      const allPurchases = this.creditCardPurchasesMap.get(userId) || [];
+      const cardPurchases = allPurchases.filter((p) => p.productId === product.id && p.status === 'PENDING');
+      const statement = FinancialCalculatorV2.calculateCreditCardStatement(cardPurchases, product.managementFeeMonthly || 0);
+
+      obName = `Extracto Tarjeta ${product.name} (${dto.periodMonth}/${dto.periodYear})`;
+      totalAmount = statement.totalStatementAmount;
+      capitalComp = statement.totalCapitalPayment;
+      interestComp = statement.totalInterestPayment;
+      insuranceComp = product.associatedInsurancesMonthly || 0;
+      feesComp = statement.managementFee;
+      totalAmount = FinancialCalculatorV2.fromCents(
+        FinancialCalculatorV2.toCents(totalAmount) + FinancialCalculatorV2.toCents(insuranceComp)
+      );
+    } else {
+      // Crédito tradicional (Francés o Alemán)
+      const remainingN = product.remainingInstallments || 12;
+      const totalN = product.totalInstallments || 12;
+      const installmentNum = totalN - remainingN + 1;
+
+      let scheduleItem: any;
+      if (product.amortizationMethod === 'GERMAN') {
+        const schedule = FinancialCalculatorV2.generateGermanAmortizationSchedule(
+          product.currentPrincipalBalance,
+          product.nominalRateMonthly,
+          remainingN,
+          product.associatedInsurancesMonthly || 0
+        );
+        scheduleItem = schedule[0];
+      } else {
+        const schedule = FinancialCalculatorV2.generateFrenchAmortizationSchedule(
+          product.currentPrincipalBalance,
+          product.nominalRateMonthly,
+          remainingN,
+          product.associatedInsurancesMonthly || 0
+        );
+        scheduleItem = schedule[0];
+      }
+
+      if (!scheduleItem) {
+        throw new Error('No se puede generar cuota: el crédito ya no tiene saldo pendiente');
+      }
+
+      obName = `Cuota ${installmentNum}/${totalN} ${product.name}`;
+      totalAmount = scheduleItem.totalPayment;
+      capitalComp = scheduleItem.principalPayment;
+      interestComp = scheduleItem.interestPayment;
+      insuranceComp = scheduleItem.insurancePayment;
+      feesComp = product.managementFeeMonthly || 0;
+    }
+
+    const defaultDueDay = product.paymentDueDay || product.statementCutoffDay || 15;
+    const formattedDueDay = defaultDueDay.toString().padStart(2, '0');
+    const formattedMonth = dto.periodMonth.toString().padStart(2, '0');
+    const computedDueDate = dto.dueDate || `${dto.periodYear}-${formattedMonth}-${formattedDueDay}`;
+
+    const newObligation: PeriodObligation = {
+      id: 'ob-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      userId,
+      creditProductId: product.id,
+      sourceType: 'CREDIT_INSTALLMENT',
+      periodYear: dto.periodYear,
+      periodMonth: dto.periodMonth,
+      name: obName,
+      amount: totalAmount,
+      amountPaid: 0,
+      amountPending: totalAmount,
+      status: 'PENDING',
+      orderIndex: existingObs.length + 1,
+      dueDate: computedDueDate,
+      capitalComponent: capitalComp,
+      interestCurrentComponent: interestComp,
+      interestMoraComponent: 0,
+      insuranceComponent: insuranceComp,
+      otherFeesComponent: feesComp,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.periodObligationsMap.set(userId, [...existingObs, newObligation]);
+    return newObligation;
   }
 
   // --- REPOSITORIO DE OBLIGACIONES Y PAGOS ---
@@ -663,6 +1013,17 @@ export class LocalFinancialAdapter
             FinancialCalculatorV2.toCents(credit.currentPrincipalBalance) - FinancialCalculatorV2.toCents(appliedCap)
           )
         );
+        if (credit.type === 'CREDIT_CARD') {
+          credit.usedCreditLimit = credit.currentPrincipalBalance;
+          credit.availableCreditLimit = Math.max(
+            0,
+            FinancialCalculatorV2.fromCents(
+              FinancialCalculatorV2.toCents(credit.approvedCreditLimit || 0) - FinancialCalculatorV2.toCents(credit.usedCreditLimit)
+            )
+          );
+        } else if (obligation.status === 'PAID' && credit.remainingInstallments && credit.remainingInstallments > 0) {
+          credit.remainingInstallments = Math.max(0, credit.remainingInstallments - 1);
+        }
         credit.updatedAt = new Date().toISOString();
       }
     }

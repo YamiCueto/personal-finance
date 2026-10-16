@@ -53,8 +53,8 @@ export class PeriodObligationsService {
     this.activePaymentIntents.add(intentKey);
 
     try {
-      // Si no se proporcionó una clave de idempotencia, generar una determinista por intención
-      const idempotencyKey = dto.idempotencyKey || `pay-${dto.obligationId}-${Date.now()}`;
+      // Si no se proporcionó una clave de idempotencia, generar un identificador único seguro
+      const idempotencyKey = dto.idempotencyKey || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `pay-${dto.obligationId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
       return await this.repo.recordPayment(this.userId, {
         ...dto,
         idempotencyKey,
