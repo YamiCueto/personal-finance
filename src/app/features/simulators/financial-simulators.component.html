@@ -18,7 +18,8 @@
       (click)="setTab('prepayment')"
       data-testid="tab-prepayment"
     >
-      ⚡ Abonos Extraordinarios a Capital
+      <app-icon name="bolt" [size]="16" />
+      <span>Abonos Extraordinarios a Capital</span>
     </button>
     <button
       type="button"
@@ -29,13 +30,16 @@
       (click)="setTab('redeferred')"
       data-testid="tab-redeferred"
     >
-      🔄 Simulación de Rediferidos
+      <app-icon name="refresh" [size]="16" />
+      <span>Simulación de Rediferidos</span>
     </button>
   </div>
 
   <!-- AVISO LEGAL OBLIGATORIO -->
   <div class="disclaimer-banner" role="note">
-    <span class="disclaimer-icon">ℹ️</span>
+    <span class="disclaimer-icon">
+      <app-icon name="alert" [size]="18" />
+    </span>
     <div class="disclaimer-text">
       <strong>Simulación Informativa No Vinculante:</strong>
       Los cálculos presentados constituyen estimaciones matemáticas deterministas proyectadas. No modifican los saldos reales de sus cuentas ni ejecutan pagos automáticos ante sus entidades financieras.
@@ -64,7 +68,7 @@
 
             @if (selectedPrepaymentCredit(); as credit) {
               <div class="credit-context-chip">
-                <span>Saldo actual: <strong class="text-cyan">{{ formatMoney(credit.currentPrincipalBalance) }}</strong></span>
+                <span>Saldo actual: <strong class="text-amber">{{ formatMoney(credit.currentPrincipalBalance) }}</strong></span>
                 <span>Tasa: {{ credit.effectiveAnnualRate }}% EA</span>
                 <span>Plazo restante: {{ credit.remainingInstallments || credit.totalInstallments }} cuotas</span>
               </div>
@@ -124,7 +128,7 @@
           @if (prepaymentResult(); as res) {
             <div class="kpi-savings-hero">
               <span class="savings-label">Ahorro Estimado de Intereses</span>
-              <span class="savings-value text-cyan" data-testid="prepayment-interest-savings">
+              <span class="savings-value text-green" data-testid="prepayment-interest-savings">
                 {{ formatMoney(res.estimatedInterestSavings) }}
               </span>
               <span class="savings-note">
@@ -154,20 +158,20 @@
               </div>
 
               <div class="comp-col after">
-                <h4 class="comp-header text-cyan">Escenario Simulado</h4>
+                <h4 class="comp-header text-amber">Escenario Simulado</h4>
                 <div class="comp-row">
                   <span class="comp-label">Nuevo Saldo:</span>
-                  <span class="comp-val text-cyan font-semibold">{{ formatMoney(res.simulatedPrincipal) }}</span>
+                  <span class="comp-val text-amber font-semibold">{{ formatMoney(res.simulatedPrincipal) }}</span>
                 </div>
                 <div class="comp-row">
                   <span class="comp-label">Nuevo Plazo:</span>
-                  <span class="comp-val" [class.text-cyan]="res.strategy === 'REDUCE_TERM'">
+                  <span class="comp-val" [class.text-amber]="res.strategy === 'REDUCE_TERM'">
                     {{ res.newRemainingInstallments }} meses
                   </span>
                 </div>
                 <div class="comp-row">
                   <span class="comp-label">Nueva Cuota:</span>
-                  <span class="comp-val" [class.text-cyan]="res.strategy === 'REDUCE_INSTALLMENT'">
+                  <span class="comp-val" [class.text-amber]="res.strategy === 'REDUCE_INSTALLMENT'">
                     {{ formatMoney(res.newInstallment) }}
                   </span>
                 </div>
@@ -179,7 +183,9 @@
             </div>
           } @else {
             <div class="empty-simulation">
-              <span class="empty-sim-icon">📊</span>
+              <div class="empty-sim-icon">
+                <app-icon name="document-text" [size]="28" />
+              </div>
               <p>Configure el monto y la estrategia para simular el impacto financiero del abono a capital.</p>
             </div>
           }
@@ -210,7 +216,7 @@
 
             @if (selectedRedeferredCredit(); as credit) {
               <div class="credit-context-chip">
-                <span>Saldo actual: <strong class="text-cyan">{{ formatMoney(credit.currentPrincipalBalance) }}</strong></span>
+                <span>Saldo actual: <strong class="text-amber">{{ formatMoney(credit.currentPrincipalBalance) }}</strong></span>
                 <span>Tasa actual: {{ credit.effectiveAnnualRate }}% EA</span>
                 <span>Plazo actual: {{ credit.remainingInstallments || credit.totalInstallments }} meses</span>
               </div>
@@ -273,7 +279,7 @@
               <span class="savings-label">
                 {{ res.totalCostDifference > 0 ? 'Sobrecosto Financiero Estimado' : 'Ahorro Financiero Estimado' }}
               </span>
-              <span class="savings-value" [class.text-cyan]="res.totalCostDifference <= 0" [class.text-amber]="res.totalCostDifference > 0" data-testid="redeferred-cost-diff">
+              <span class="savings-value" [class.text-green]="res.totalCostDifference <= 0" [class.text-red]="res.totalCostDifference > 0" data-testid="redeferred-cost-diff">
                 {{ formatMoney(res.totalCostDifference) }}
               </span>
               <span class="savings-note">
@@ -307,10 +313,10 @@
               </div>
 
               <div class="comp-col after">
-                <h4 class="comp-header text-cyan">Condiciones Propuestas</h4>
+                <h4 class="comp-header text-amber">Condiciones Propuestas</h4>
                 <div class="comp-row">
                   <span class="comp-label">Nuevo Plazo:</span>
-                  <span class="comp-val text-cyan font-semibold">{{ res.proposedInstallments }} meses</span>
+                  <span class="comp-val text-amber font-semibold">{{ res.proposedInstallments }} meses</span>
                 </div>
                 <div class="comp-row">
                   <span class="comp-label">Nueva Tasa EA:</span>
@@ -332,7 +338,9 @@
             </div>
           } @else {
             <div class="empty-simulation">
-              <span class="empty-sim-icon">🔄</span>
+              <div class="empty-sim-icon">
+                <app-icon name="refresh" [size]="28" />
+              </div>
               <p>Ingrese el nuevo plazo y tasa para proyectar cómo cambiará el costo total y el valor de su cuota mensual.</p>
             </div>
           }

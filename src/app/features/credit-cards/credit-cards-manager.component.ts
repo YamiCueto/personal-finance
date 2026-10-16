@@ -4,11 +4,13 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FinancialFacade } from '../../core/state/financial.facade';
 import { CreditProduct, CreditCardPurchase } from '../../core/models/financial-v2.model';
 import { FinancialCalculatorV2 } from '../../core/services/financial-calculator-v2';
+import { IconComponent } from '../../shared/components/icon/icon.component';
+import { CreditCardVisualComponent } from '../../shared/components/credit-card-visual/credit-card-visual.component';
 
 @Component({
   selector: 'app-credit-cards-manager',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, CreditCardVisualComponent],
   templateUrl: './credit-cards-manager.component.html',
   styleUrl: './credit-cards-manager.component.scss',
 })

@@ -11,7 +11,7 @@
       data-testid="btn-open-create-card"
       (click)="openCreateCardModal()"
     >
-      <span class="icon">+</span>
+      <app-icon name="plus" [size]="16" />
       <span>Nueva Tarjeta</span>
     </button>
   </div>
@@ -26,16 +26,22 @@
       aria-live="polite"
       data-testid="card-action-alert"
     >
-      <span class="alert-icon">{{ msg.type === 'success' ? '✓' : '⚠' }}</span>
+      <span class="alert-icon">
+        <app-icon [name]="msg.type === 'success' ? 'check' : 'alert'" [size]="16" />
+      </span>
       <span class="alert-text">{{ msg.text }}</span>
-      <button type="button" class="alert-close" (click)="actionMessage.set(null)">✕</button>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Cerrar notificación">
+        <app-icon name="x" [size]="14" />
+      </button>
     </div>
   }
 
   <!-- Lista de Tarjetas -->
   @if (creditCards().length === 0) {
     <div class="empty-state" data-testid="empty-cards">
-      <div class="empty-icon">💳</div>
+      <div class="empty-icon">
+        <app-icon name="credit-card" [size]="28" />
+      </div>
       <h3 class="empty-title">No hay tarjetas de crédito registradas</h3>
       <p class="empty-desc">Registra tus tarjetas para controlar compras diferidas, cupos disponibles y proyectar extractos.</p>
       <button type="button" class="btn-secondary" (click)="openCreateCardModal()">Registrar primera tarjeta</button>
@@ -44,6 +50,16 @@
     <div class="cards-grid">
       @for (card of creditCards(); track card.id) {
         <div class="credit-card-panel" [attr.data-testid]="'card-panel-' + card.id">
+          <!-- Visualización realista de tarjeta bancaria -->
+          <div class="card-visual-wrapper">
+            <app-credit-card-visual
+              [bankName]="card.name"
+              [network]="card.name.toUpperCase().includes('MASTER') ? 'MASTERCARD' : 'VISA'"
+              [cutoffDay]="card.statementCutoffDay || 15"
+              [lastFourDigits]="'4829'"
+            />
+          </div>
+
           <!-- Encabezado de la Tarjeta -->
           <div class="panel-header">
             <div class="card-identity">
@@ -58,7 +74,7 @@
           <div class="cupo-progress-section">
             <div class="cupo-labels">
               <span class="cupo-used-label">Cupo Utilizado: {{ calculateUsagePercent(card) }}%</span>
-              <span class="cupo-avail-label text-cyan" data-testid="card-available-limit">
+              <span class="cupo-avail-label text-green" data-testid="card-available-limit">
                 Disponible: {{ formatMoney(card.availableCreditLimit ?? 0) }}
               </span>
             </div>
@@ -112,7 +128,8 @@
                 data-testid="btn-add-purchase"
                 (click)="openAddPurchaseModal(card)"
               >
-                + Registrar Compra
+                <app-icon name="plus" [size]="14" />
+                <span>Registrar Compra</span>
               </button>
             </div>
 
@@ -131,7 +148,7 @@
                     </div>
                     <div class="purchase-amounts">
                       <span class="purchase-total">{{ formatMoney(pur.originalAmount) }}</span>
-                      <span class="purchase-monthly text-cyan">
+                      <span class="purchase-monthly text-amber">
                         ~{{ formatMoney(pur.monthlyCapital + pur.monthlyInterest) }}/mes
                       </span>
                     </div>
@@ -149,7 +166,8 @@
               data-testid="btn-generate-statement"
               (click)="generateStatementObligation(card)"
             >
-              📅 Generar Extracto / Cuota del Mes
+              <app-icon name="document-text" [size]="16" />
+              <span>Generar Extracto / Cuota del Mes</span>
             </button>
           </div>
         </div>
@@ -163,7 +181,9 @@
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-card-title">
         <div class="modal-header">
           <h3 id="modal-card-title" class="modal-title">Registrar Tarjeta de Crédito</h3>
-          <button type="button" class="modal-close" (click)="closeCreateCardModal()">✕</button>
+          <button type="button" class="modal-close" (click)="closeCreateCardModal()" aria-label="Cerrar ventana">
+            <app-icon name="x" [size]="18" />
+          </button>
         </div>
 
         <form [formGroup]="cardForm" (ngSubmit)="submitCreateCard()" class="modal-form">
@@ -174,10 +194,10 @@
               type="text"
               class="form-input"
               formControlName="name"
-              placeholder="Ej. Visa Signature Bancolombia"
+              placeholder="Ej. Visa Platinum Bancolombia"
             />
             @if (cardForm.get('name')?.touched && cardForm.get('name')?.invalid) {
-              <span class="form-error">El nombre es obligatorio (mínimo 3 caracteres).</span>
+              <span class="form-error">Nombre requerido (mínimo 3 caracteres).</span>
             }
           </div>
 
@@ -186,15 +206,15 @@
               <label for="card-institution" class="form-label">Institución *</label>
               <select id="card-institution" class="form-select" formControlName="institutionId">
                 <option value="inst-banco-occidente">Banco de Occidente</option>
-                <option value="inst-nequi">Nequi Colombia</option>
                 <option value="inst-bancolombia">Bancolombia</option>
                 <option value="inst-davivienda">Davivienda</option>
+                <option value="inst-nequi">Nequi</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="card-approved-limit" class="form-label">Cupo Aprobado ($ COP) *</label>
+              <label for="card-limit" class="form-label">Cupo Total Aprobado ($ COP) *</label>
               <input
-                id="card-approved-limit"
+                id="card-limit"
                 type="number"
                 class="form-input"
                 formControlName="approvedCreditLimit"
@@ -202,12 +222,12 @@
                 min="100000"
               />
               @if (cardForm.get('approvedCreditLimit')?.touched && cardForm.get('approvedCreditLimit')?.invalid) {
-                <span class="form-error">Ingrese un cupo válido mayor a 100,000 COP.</span>
+                <span class="form-error">Cupo requerido (mínimo $100.000).</span>
               }
             </div>
           </div>
 
-          <div class="form-row">
+          <div class="form-row rate-row">
             <div class="form-group">
               <label for="card-rate-type" class="form-label">Tipo de Tasa *</label>
               <select id="card-rate-type" class="form-select" formControlName="rateType">
@@ -216,14 +236,14 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="card-rate-value" class="form-label">Tasa de Interés (%) *</label>
+              <label for="card-rate-val" class="form-label">Tasa de Interés (%) *</label>
               <input
-                id="card-rate-value"
+                id="card-rate-val"
                 type="number"
                 step="0.01"
                 class="form-input"
                 formControlName="rateValue"
-                placeholder="29.12"
+                placeholder="24.8"
                 min="0"
                 max="100"
               />
@@ -232,9 +252,9 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="card-cutoff-day" class="form-label">Día de Corte (1-31) *</label>
+              <label for="card-cutoff" class="form-label">Día de Corte (1-31) *</label>
               <input
-                id="card-cutoff-day"
+                id="card-cutoff"
                 type="number"
                 class="form-input"
                 formControlName="statementCutoffDay"
@@ -244,9 +264,9 @@
               />
             </div>
             <div class="form-group">
-              <label for="card-due-day" class="form-label">Día Límite de Pago (1-31) *</label>
+              <label for="card-due" class="form-label">Día Límite de Pago (1-31) *</label>
               <input
-                id="card-due-day"
+                id="card-due"
                 type="number"
                 class="form-input"
                 formControlName="paymentDueDay"
@@ -258,13 +278,13 @@
           </div>
 
           <div class="form-group">
-            <label for="card-management-fee" class="form-label">Cuota de Manejo Mensual ($ COP)</label>
+            <label for="card-fee" class="form-label">Cuota de Manejo Mensual ($ COP)</label>
             <input
-              id="card-management-fee"
+              id="card-fee"
               type="number"
               class="form-input"
               formControlName="managementFeeMonthly"
-              placeholder="28500"
+              placeholder="32000"
               min="0"
             />
           </div>
@@ -292,25 +312,25 @@
         <div class="modal-header">
           <div class="modal-title-wrap">
             <h3 id="modal-purchase-title" class="modal-title">Registrar Compra Diferida</h3>
-            <p class="modal-subtitle">
-              Tarjeta: {{ card.name }} | Cupo Disponible: <span class="text-cyan font-semibold">{{ formatMoney(card.availableCreditLimit ?? 0) }}</span>
-            </p>
+            <p class="modal-subtitle">Tarjeta: {{ card.name }} (Disponible: {{ formatMoney(card.availableCreditLimit ?? 0) }})</p>
           </div>
-          <button type="button" class="modal-close" (click)="closeAddPurchaseModal()">✕</button>
+          <button type="button" class="modal-close" (click)="closeAddPurchaseModal()" aria-label="Cerrar ventana">
+            <app-icon name="x" [size]="18" />
+          </button>
         </div>
 
         <form [formGroup]="purchaseForm" (ngSubmit)="submitCreatePurchase()" class="modal-form">
           <div class="form-group">
-            <label for="purchase-desc" class="form-label">Descripción de la Compra *</label>
+            <label for="purchase-desc" class="form-label">Descripción del Bien o Servicio *</label>
             <input
               id="purchase-desc"
               type="text"
               class="form-input"
               formControlName="description"
-              placeholder="Ej. Tiquetes Aéreos, Computador portátil, Supermercado"
+              placeholder="Ej. Tiquetes aéreos, MacBook Pro"
             />
             @if (purchaseForm.get('description')?.touched && purchaseForm.get('description')?.invalid) {
-              <span class="form-error">La descripción es obligatoria (mínimo 3 caracteres).</span>
+              <span class="form-error">Descripción requerida (mínimo 3 caracteres).</span>
             }
           </div>
 
@@ -326,7 +346,7 @@
                 min="1000"
               />
               @if (purchaseForm.get('amount')?.touched && purchaseForm.get('amount')?.invalid) {
-                <span class="form-error">Ingrese un valor de compra mayor a 0.</span>
+                <span class="form-error">Monto requerido mayor a $1.000.</span>
               }
             </div>
             <div class="form-group">
@@ -354,17 +374,17 @@
               />
             </div>
             <div class="form-group">
-              <label for="purchase-rate" class="form-label">Tasa Mensual (% NMV)</label>
+              <label for="purchase-rate" class="form-label">Tasa Mensual Específica (% NMV, Opcional)</label>
               <input
                 id="purchase-rate"
                 type="number"
                 step="0.01"
                 class="form-input"
                 formControlName="customRate"
-                placeholder="2.15"
+                placeholder="Dejar en blanco para usar tasa de tarjeta"
                 min="0"
+                max="100"
               />
-              <span class="form-hint">Si es a 1 cuota, puede registrarse con 0% de interés</span>
             </div>
           </div>
 
@@ -376,7 +396,7 @@
               data-testid="btn-submit-purchase"
               [disabled]="isSubmitting() || purchaseForm.invalid"
             >
-              {{ isSubmitting() ? 'Registrando...' : 'Registrar Compra' }}
+              {{ isSubmitting() ? 'Registrando...' : 'Confirmar Compra' }}
             </button>
           </div>
         </form>

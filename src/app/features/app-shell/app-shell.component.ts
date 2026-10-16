@@ -13,6 +13,10 @@ import { CreditsManagerComponent } from '../credits/credits-manager.component';
 import { CreditCardsManagerComponent } from '../credit-cards/credit-cards-manager.component';
 import { FinancialSimulatorsComponent } from '../simulators/financial-simulators.component';
 
+import { IconComponent } from '../../shared/components/icon/icon.component';
+import { ObligationStatusBadgeComponent } from '../../shared/components/obligation-status-badge/obligation-status-badge.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+
 @Component({
   selector: 'app-app-shell',
   standalone: true,
@@ -22,6 +26,9 @@ import { FinancialSimulatorsComponent } from '../simulators/financial-simulators
     CreditsManagerComponent,
     CreditCardsManagerComponent,
     FinancialSimulatorsComponent,
+    IconComponent,
+    ObligationStatusBadgeComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
@@ -42,6 +49,10 @@ export class AppShellComponent implements OnInit {
   readonly isSubmitting = signal<boolean>(false);
   readonly actionError = signal<string | null>(null);
   readonly actionSuccess = signal<string | null>(null);
+
+  // Control de interfaz responsive
+  readonly isSidebarCollapsed = signal<boolean>(false);
+  readonly showMobileMoreMenu = signal<boolean>(false);
 
   // Pestaña activa
   readonly activeTab = signal<
@@ -141,7 +152,20 @@ export class AppShellComponent implements OnInit {
     tab: 'waterfall' | 'obligations' | 'credits' | 'cards' | 'simulators' | 'incomes' | 'accounts'
   ): void {
     this.activeTab.set(tab);
+    this.showMobileMoreMenu.set(false);
     this.clearFeedback();
+  }
+
+  toggleSidebar(): void {
+    this.isSidebarCollapsed.update((v) => !v);
+  }
+
+  toggleMobileMore(): void {
+    this.showMobileMoreMenu.update((v) => !v);
+  }
+
+  closeMobileMore(): void {
+    this.showMobileMoreMenu.set(false);
   }
 
   clearFeedback(): void {

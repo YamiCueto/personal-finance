@@ -5,9 +5,10 @@
         <span class="vault-dot" aria-hidden="true"></span>
         <span class="vault-label">Financial Control System</span>
       </div>
+      <div class="wordmark">personal<em>.</em></div>
       <h1 class="vault-title">Create Vault Account</h1>
       <p class="vault-description">
-        Establish your isolated personal ledger. Multi-user security with strict database Row Level Security.
+        Establece tu bóveda financiera aislada. Seguridad multi-usuario con Row Level Security (RLS) en base de datos.
       </p>
     </header>
 
@@ -41,7 +42,7 @@
     <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" novalidate class="signup-form">
       <!-- Email Field -->
       <div class="form-field">
-        <label for="email" class="field-label">Email Address</label>
+        <label for="email" class="field-label">Correo electrónico / Email Address</label>
         <div class="input-wrapper">
           <input
             id="email"
@@ -58,7 +59,7 @@
         @if (email?.invalid && (email?.dirty || email?.touched)) {
           <p id="email-error" class="field-error" role="alert">
             @if (email?.hasError('required')) {
-              Email address is required.
+              El correo es requerido / Email address is required.
             } @else if (email?.hasError('email')) {
               Please enter a valid email format.
             }
@@ -68,14 +69,14 @@
 
       <!-- Password Field -->
       <div class="form-field">
-        <label for="password" class="field-label">Master Password</label>
+        <label for="password" class="field-label">Contraseña maestra / Master Password</label>
         <div class="input-wrapper">
           <input
             id="password"
             [type]="showPassword() ? 'text' : 'password'"
             formControlName="password"
             autocomplete="new-password"
-            placeholder="At least 8 chars, 1 letter, 1 number"
+            placeholder="Mínimo 8 caracteres, 1 letra y 1 número"
             class="field-input"
             [class.input-invalid]="password?.invalid && (password?.dirty || password?.touched)"
             [attr.aria-invalid]="password?.invalid && (password?.dirty || password?.touched)"
@@ -91,7 +92,7 @@
             {{ showPassword() ? 'Hide' : 'Show' }}
           </button>
         </div>
-        <p id="password-hint" class="field-hint">Must be at least 8 characters with letters and numbers.</p>
+        <p id="password-hint" class="field-hint">Mínimo 8 caracteres con letras y números / Letters and numbers.</p>
         @if (password?.invalid && (password?.dirty || password?.touched)) {
           <p id="password-error" class="field-error" role="alert">
             @if (password?.hasError('required')) {
@@ -107,14 +108,14 @@
 
       <!-- Password Confirmation Field -->
       <div class="form-field">
-        <label for="passwordConfirmation" class="field-label">Confirm Password</label>
+        <label for="passwordConfirmation" class="field-label">Confirmar Contraseña / Confirm Password</label>
         <div class="input-wrapper">
           <input
             id="passwordConfirmation"
             [type]="showConfirmation() ? 'text' : 'password'"
             formControlName="passwordConfirmation"
             autocomplete="new-password"
-            placeholder="Re-enter your master password"
+            placeholder="Repite tu contraseña maestra"
             class="field-input"
             [class.input-invalid]="(passwordConfirmation?.invalid || hasPasswordMismatch) && (passwordConfirmation?.dirty || passwordConfirmation?.touched)"
             [attr.aria-invalid]="(passwordConfirmation?.invalid || hasPasswordMismatch) && (passwordConfirmation?.dirty || passwordConfirmation?.touched)"
@@ -153,9 +154,9 @@
         >
           @if (isSubmitting()) {
             <span class="btn-spinner" aria-hidden="true"></span>
-            <span>Securing Account...</span>
+            <span>Registrando... / Securing Account...</span>
           } @else {
-            <span>Create Account</span>
+            <span>Registrar Cuenta / Create Account</span>
           }
         </button>
       </div>
@@ -163,8 +164,8 @@
 
     <footer class="signup-footer">
       <p class="footer-prompt">
-        Already have a vault account?
-        <a routerLink="/auth/login" class="link-action">Sign In</a>
+        ¿Ya tienes una cuenta?
+        <a routerLink="/auth/login" class="link-action">Iniciar Sesión / Sign In</a>
       </p>
     </footer>
   </div>

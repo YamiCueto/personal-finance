@@ -11,7 +11,7 @@
       data-testid="btn-open-create-credit"
       (click)="openCreateModal()"
     >
-      <span class="icon">+</span>
+      <app-icon name="plus" [size]="16" />
       <span>Nuevo Crédito</span>
     </button>
   </div>
@@ -26,16 +26,22 @@
       aria-live="polite"
       data-testid="credit-action-alert"
     >
-      <span class="alert-icon">{{ msg.type === 'success' ? '✓' : '⚠' }}</span>
+      <span class="alert-icon">
+        <app-icon [name]="msg.type === 'success' ? 'check' : 'alert'" [size]="16" />
+      </span>
       <span class="alert-text">{{ msg.text }}</span>
-      <button type="button" class="alert-close" (click)="actionMessage.set(null)">✕</button>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Cerrar notificación">
+        <app-icon name="x" [size]="14" />
+      </button>
     </div>
   }
 
   <!-- Lista de Créditos Activos -->
   @if (loans().length === 0) {
     <div class="empty-state" data-testid="empty-credits">
-      <div class="empty-icon">💳</div>
+      <div class="empty-icon">
+        <app-icon name="document-text" [size]="28" />
+      </div>
       <h3 class="empty-title">No hay créditos registrados</h3>
       <p class="empty-desc">Registra un nuevo préstamo para proyectar su tabla de amortización e integrarlo a tus cuotas mensuales.</p>
       <button type="button" class="btn-secondary" (click)="openCreateModal()">Crear primer crédito</button>
@@ -58,7 +64,7 @@
           <div class="credit-card-metrics">
             <div class="metric-item highlight">
               <span class="metric-label">Capital Pendiente</span>
-              <span class="metric-val text-cyan" data-testid="credit-principal-balance">
+              <span class="metric-val text-amber" data-testid="credit-principal-balance">
                 {{ formatMoney(credit.currentPrincipalBalance) }}
               </span>
             </div>
@@ -98,7 +104,8 @@
               data-testid="btn-view-schedule"
               (click)="openScheduleModal(credit)"
             >
-              📊 Ver Tabla de Amortización
+              <app-icon name="document-text" [size]="16" />
+              <span>Ver Tabla de Amortización</span>
             </button>
             <button
               type="button"
@@ -106,7 +113,8 @@
               data-testid="btn-generate-installment"
               (click)="generateMonthlyInstallment(credit)"
             >
-              📅 Generar Cuota del Mes
+              <app-icon name="bolt" [size]="16" />
+              <span>Generar Cuota del Mes</span>
             </button>
           </div>
         </div>
@@ -120,7 +128,9 @@
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-credit-title">
         <div class="modal-header">
           <h3 id="modal-credit-title" class="modal-title">Registrar Nuevo Crédito</h3>
-          <button type="button" class="modal-close" (click)="closeCreateModal()">✕</button>
+          <button type="button" class="modal-close" (click)="closeCreateModal()" aria-label="Cerrar ventana">
+            <app-icon name="x" [size]="18" />
+          </button>
         </div>
 
         <form [formGroup]="creditForm" (ngSubmit)="submitCreateCredit()" class="modal-form">
@@ -274,7 +284,9 @@
               Saldo: {{ formatMoney(credit.currentPrincipalBalance) }} | Tasa: {{ credit.effectiveAnnualRate }}% EA ({{ credit.nominalRateMonthly }}% NMV)
             </p>
           </div>
-          <button type="button" class="modal-close" (click)="closeScheduleModal()">✕</button>
+          <button type="button" class="modal-close" (click)="closeScheduleModal()" aria-label="Cerrar tabla">
+            <app-icon name="x" [size]="18" />
+          </button>
         </div>
 
         <!-- Selector de Sistema Francés / Alemán -->
@@ -286,7 +298,8 @@
             (click)="setScheduleMethod('FRENCH')"
             data-testid="toggle-french"
           >
-            🏛️ Sistema Francés (Cuota Fija)
+            <app-icon name="document-text" [size]="16" />
+            <span>Sistema Francés (Cuota Fija)</span>
           </button>
           <button
             type="button"
@@ -295,7 +308,8 @@
             (click)="setScheduleMethod('GERMAN')"
             data-testid="toggle-german"
           >
-            🇩🇪 Sistema Alemán (Capital Constante)
+            <app-icon name="bolt" [size]="16" />
+            <span>Sistema Alemán (Capital Constante)</span>
           </button>
         </div>
 
@@ -322,8 +336,8 @@
                 <tr [class.final-row]="row.installmentNumber === currentSchedule().length">
                   <td class="col-num">{{ row.installmentNumber }}</td>
                   <td class="col-money font-semibold">{{ formatMoney(row.totalPayment) }}</td>
-                  <td class="col-money text-cyan">{{ formatMoney(row.principalPayment) }}</td>
-                  <td class="col-money text-amber">{{ formatMoney(row.interestPayment) }}</td>
+                  <td class="col-money text-amber">{{ formatMoney(row.principalPayment) }}</td>
+                  <td class="col-money text-muted">{{ formatMoney(row.interestPayment) }}</td>
                   <td class="col-money">{{ formatMoney(row.insurancePayment) }}</td>
                   <td class="col-money font-mono" [class.text-success]="row.remainingPrincipal === 0">
                     {{ formatMoney(row.remainingPrincipal) }}

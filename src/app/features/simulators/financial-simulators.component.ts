@@ -4,11 +4,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FinancialFacade } from '../../core/state/financial.facade';
 import { CreditProduct, PrepaymentSimulationResult, RedeferredSimulationResult } from '../../core/models/financial-v2.model';
 import { FinancialCalculatorV2 } from '../../core/services/financial-calculator-v2';
+import { IconComponent } from '../../shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-financial-simulators',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent],
   templateUrl: './financial-simulators.component.html',
   styleUrl: './financial-simulators.component.scss',
 })
