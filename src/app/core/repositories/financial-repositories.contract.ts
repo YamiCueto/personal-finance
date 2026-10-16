@@ -9,6 +9,7 @@ import {
   ObligationPayment,
   InternalAccountTransfer,
   PaymentBreakdownInput,
+  CreditCardPurchase,
 } from '../models/financial-v2.model';
 
 export interface CreateAccountDTO {
@@ -21,16 +22,36 @@ export interface CreateAccountDTO {
 }
 
 export interface CreateCreditProductDTO {
-  institutionId: string;
+  institutionId?: string;
   name: string;
   type: CreditProduct['type'];
   originalPrincipal: number;
   nominalRateMonthly: number;
   effectiveAnnualRate: number;
   totalInstallments?: number;
+  remainingInstallments?: number;
   amortizationMethod?: CreditProduct['amortizationMethod'];
   associatedInsurancesMonthly?: number;
   approvedCreditLimit?: number;
+  statementCutoffDay?: number;
+  paymentDueDay?: number;
+  managementFeeMonthly?: number;
+}
+
+export interface CreateCreditCardPurchaseDTO {
+  creditCardId: string;
+  description: string;
+  amount: number;
+  totalInstallments: number;
+  purchaseDate?: string;
+  interestRateMonthly?: number;
+}
+
+export interface GenerateInstallmentDTO {
+  creditProductId: string;
+  periodYear: number;
+  periodMonth: number;
+  dueDate?: string;
 }
 
 export interface CreateIncomeDTO {
@@ -123,6 +144,9 @@ export interface ICreditProductRepository {
   getCreditProductById(userId: string, creditId: string): Promise<CreditProduct | null>;
   createCreditProduct(userId: string, dto: CreateCreditProductDTO): Promise<CreditProduct>;
   recordRestructure(userId: string, dto: RecordRestructureDTO): Promise<FinancialOperationResult>;
+  getCreditCardPurchases(userId: string, creditCardId?: string): Promise<CreditCardPurchase[]>;
+  createCreditCardPurchase(userId: string, dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase>;
+  generateCreditInstallmentObligation(userId: string, dto: GenerateInstallmentDTO): Promise<PeriodObligation>;
 }
 
 /**

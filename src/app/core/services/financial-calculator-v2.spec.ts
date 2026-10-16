@@ -409,4 +409,165 @@ describe('FinancialCalculatorV2 — Motor Financiero Riguroso', () => {
       expect(cascade[1].remainingResto).toBe(4000000);
     });
   });
+
+  describe('Sprint 2 / Fase 3: Motor Avanzado de Amortizaciones, Tarjetas y Simulaciones', () => {
+    it('debe convertir exactamente entre EA y NMV según la convención colombiana', () => {
+      // 25.00% EA
+      const nmv = FinancialCalculatorV2.convertEaToNmv(25);
+      expect(nmv).toBeCloseTo(22.52, 1);
+
+      // Reversión NMV -> EA
+      const eaReconstructed = FinancialCalculatorV2.convertNmvToEa(nmv);
+      expect(eaReconstructed).toBeCloseTo(25, 1);
+
+      // Tasa 0%
+      expect(FinancialCalculatorV2.convertEaToNmv(0)).toBe(0);
+      expect(FinancialCalculatorV2.convertNmvToEa(0)).toBe(0);
+    });
+
+    it('debe generar cronograma de amortización alemán con capital constante y saldo final exactamente en 0 COP', () => {
+      const principal = 12000000;
+      const rateMonthly = 1.5;
+      const n = 12;
+      const insurance = 25000;
+
+      const schedule = FinancialCalculatorV2.generateGermanAmortizationSchedule(principal, rateMonthly, n, insurance);
+      expect(schedule.length).toBe(12);
+
+      // En el sistema alemán, el abono a capital es constante: 12,000,000 / 12 = 1,000,000
+      for (let i = 0; i < 11; i++) {
+        expect(schedule[i].principalPayment).toBe(1000000);
+      }
+      // La cuota total decrece a medida que disminuye el interés
+      expect(schedule[0].totalPayment).toBeGreaterThan(schedule[11].totalPayment);
+      expect(schedule[0].interestPayment).toBeGreaterThan(schedule[11].interestPayment);
+
+      // Saldo final en exactamente 0
+      expect(schedule[11].remainingPrincipal).toBe(0);
+
+      // Suma de capitales exactamente igual al capital original
+      const sumCap = schedule.reduce((sum, item) => sum + item.principalPayment, 0);
+      expect(FinancialCalculatorV2.roundMoney(sumCap)).toBe(principal);
+    });
+
+    it('debe generar amortización alemana con tasa 0% (Crédito B)', () => {
+      const principal = 6000000;
+      const rateMonthly = 0;
+      const n = 6;
+
+      const schedule = FinancialCalculatorV2.generateGermanAmortizationSchedule(principal, rateMonthly, n, 0);
+      expect(schedule.length).toBe(6);
+
+      schedule.forEach((item) => {
+        expect(item.principalPayment).toBe(1000000);
+        expect(item.interestPayment).toBe(0);
+        expect(item.totalPayment).toBe(1000000);
+      });
+      expect(schedule[5].remainingPrincipal).toBe(0);
+    });
+
+    it('debe simular abono extraordinario reduciendo plazo (REDUCE_TERM)', () => {
+      const principal = 30000000;
+      const ea = 18.86;
+      const remainingN = 48;
+      const prepayment = 5000000;
+
+      const sim = FinancialCalculatorV2.simulatePrepayment(
+        principal,
+        ea,
+        remainingN,
+        prepayment,
+        'REDUCE_TERM',
+        45000
+      );
+
+      expect(sim.previousPrincipal).toBe(30000000);
+      expect(sim.simulatedPrincipal).toBe(25000000);
+      expect(sim.newRemainingInstallments).toBeLessThan(remainingN);
+      expect(sim.estimatedInterestSavings).toBeGreaterThan(0);
+      expect(sim.newInstallment).toBe(sim.originalInstallment);
+    });
+
+    it('debe simular abono extraordinario reduciendo cuota (REDUCE_INSTALLMENT)', () => {
+      const principal = 30000000;
+      const ea = 18.86;
+      const remainingN = 48;
+      const prepayment = 5000000;
+
+      const sim = FinancialCalculatorV2.simulatePrepayment(
+        principal,
+        ea,
+        remainingN,
+        prepayment,
+        'REDUCE_INSTALLMENT',
+        45000
+      );
+
+      expect(sim.previousPrincipal).toBe(30000000);
+      expect(sim.simulatedPrincipal).toBe(25000000);
+      expect(sim.newRemainingInstallments).toBe(remainingN);
+      expect(sim.newInstallment).toBeLessThan(sim.originalInstallment);
+      expect(sim.estimatedInterestSavings).toBeGreaterThan(0);
+    });
+
+    it('debe simular rediferidos de deuda comparando costos actuales vs propuestos', () => {
+      const principal = 10000000;
+      const currentEa = 29.12;
+      const currentN = 12;
+      const proposedEa = 22.0;
+      const proposedN = 24;
+
+      const sim = FinancialCalculatorV2.simulateRedeferred(
+        principal,
+        currentEa,
+        currentN,
+        proposedEa,
+        proposedN
+      );
+
+      expect(sim.currentPrincipal).toBe(10000000);
+      expect(sim.currentRemainingInstallments).toBe(12);
+      expect(sim.proposedInstallments).toBe(24);
+      // Al extender a 24 meses la cuota mensual disminuye
+      expect(sim.proposedInstallment).toBeLessThan(sim.currentInstallment);
+      // Se calculan las diferencias de costo
+      expect(sim.totalCostDifference).toBeDefined();
+      expect(sim.interestDifference).toBeDefined();
+    });
+
+    it('debe calcular extracto de tarjeta de crédito a partir de compras diferidas activas', () => {
+      const purchases = [
+        {
+          id: 'p1',
+          description: 'MacBook',
+          originalAmount: 4800000,
+          totalInstallments: 24,
+          remainingInstallments: 12,
+          interestRateMonthly: 2.15,
+          status: 'PENDING' as const,
+        },
+        {
+          id: 'p2',
+          description: 'Mercado',
+          originalAmount: 450000,
+          totalInstallments: 1,
+          remainingInstallments: 1,
+          interestRateMonthly: 0,
+          status: 'PENDING' as const,
+        },
+      ];
+
+      const statement = FinancialCalculatorV2.calculateCreditCardStatement(purchases, 28500);
+
+      expect(statement.activePurchasesCount).toBe(2);
+      // Capital p1: 4800000 / 24 = 200,000
+      // Capital p2: 450000 / 1 = 450,000
+      expect(statement.totalCapitalPayment).toBe(650000);
+      expect(statement.managementFee).toBe(28500);
+      expect(statement.totalInterestPayment).toBeGreaterThan(0);
+      expect(statement.totalStatementAmount).toBe(
+        FinancialCalculatorV2.roundMoney(650000 + statement.totalInterestPayment + 28500)
+      );
+    });
+  });
 });

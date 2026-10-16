@@ -68,7 +68,7 @@ export type ProductStatus = 'ACTIVE' | 'PAID_OFF' | 'RESTRUCTURED' | 'DEFAULTED'
 export interface CreditProduct {
   id: string;
   userId: string;
-  institutionId: string;
+  institutionId?: string;
   name: string; // ej. Crédito Vehículo Banco de Occidente, RappiCard Visa, Addi
   type: CreditProductType;
   status: ProductStatus;
@@ -84,6 +84,7 @@ export interface CreditProduct {
   disbursementDate?: string; // Fecha de desembolso
   statementCutoffDay?: number; // Día de corte (1-31)
   duePaymentDay?: number; // Día límite de pago (1-31)
+  paymentDueDay?: number; // Alias compatible día límite de pago
 
   // Cuotas y plazo
   totalInstallments?: number; // Cuotas pactadas originales (ej. 60)
@@ -372,3 +373,72 @@ export interface MonthlyLedgerSummaryV2 {
   isDebtCalculationDefinitive: boolean; // True si los pasivos cuentan con liquidación completa; false si es estimación de capital
   debtNotes: string; // Explicación transparente de las cifras consideradas
 }
+
+/**
+ * L. Elemento de Cronograma de Amortización (Francés / Alemán)
+ */
+export interface AmortizationScheduleItem {
+  installmentNumber: number;
+  totalPayment: number;
+  principalPayment: number;
+  interestPayment: number;
+  insurancePayment: number;
+  remainingPrincipal: number;
+}
+
+/**
+ * M. Resultado de Simulación de Abonos Extraordinarios a Capital
+ */
+export interface PrepaymentSimulationResult {
+  previousPrincipal: number;
+  simulatedPrincipal: number;
+  prepaymentAmount: number;
+  strategy: 'REDUCE_TERM' | 'REDUCE_INSTALLMENT';
+  originalInstallment: number;
+  newInstallment: number;
+  originalRemainingInstallments: number;
+  newRemainingInstallments: number;
+  originalTotalInterest: number;
+  newTotalInterest: number;
+  estimatedInterestSavings: number;
+}
+
+/**
+ * N. Resultado de Simulación de Rediferidos / Reestructuración
+ */
+export interface RedeferredSimulationResult {
+  currentPrincipal: number;
+  currentEa: number;
+  currentInstallment: number;
+  currentRemainingInstallments: number;
+  currentTotalInterest: number;
+  currentTotalCost: number;
+  proposedEa: number;
+  proposedInstallment: number;
+  proposedInstallments: number;
+  proposedTotalInterest: number;
+  proposedTotalCost: number;
+  interestDifference: number;
+  totalCostDifference: number;
+}
+
+/**
+ * O. Cálculo de Extracto / Cuota Mensual de Tarjeta de Crédito
+ */
+export interface CreditCardStatementCalculation {
+  totalStatementAmount: number;
+  totalCapitalPayment: number;
+  totalInterestPayment: number;
+  managementFee: number;
+  activePurchasesCount: number;
+  purchasesBreakdown: Array<{
+    purchaseId: string;
+    description: string;
+    capitalPayment: number;
+    interestPayment: number;
+    totalPayment: number;
+    remainingInstallments: number;
+    remainingPrincipal: number;
+  }>;
+}
+

@@ -6,6 +6,10 @@ import {
   FinancialAccount,
   Income,
   PaymentApplyOptions,
+  AmortizationScheduleItem,
+  PrepaymentSimulationResult,
+  RedeferredSimulationResult,
+  CreditCardStatementCalculation,
 } from '../models/financial-v2.model';
 
 /**
@@ -83,6 +87,31 @@ export class FinancialCalculatorV2 {
   }
 
   /**
+   * Conversión de Tasa Efectiva Anual (EA) a Tasa Nominal Mes Vencido (NMV anualizada)
+   * En la banca colombiana:
+   * i_m = (1 + EA)^(1/12) - 1
+   * NMV = i_m * 12
+   */
+  static convertEaToNmv(effectiveAnnualRatePercentage: number): number {
+    if (effectiveAnnualRatePercentage <= 0) return 0;
+    const monthlyRate = this.convertEaToMonthlyRate(effectiveAnnualRatePercentage);
+    const nmv = monthlyRate * 12 * 100;
+    return this.roundRate(nmv, 4);
+  }
+
+  /**
+   * Conversión de Tasa Nominal Mes Vencido (NMV anualizada) a Tasa Efectiva Anual (EA)
+   * i_m = (NMV / 12)
+   * EA = (1 + i_m)^12 - 1
+   */
+  static convertNmvToEa(nmvPercentage: number): number {
+    if (nmvPercentage <= 0) return 0;
+    const monthlyRate = (nmvPercentage / 100) / 12;
+    const ea = (Math.pow(1 + monthlyRate, 12) - 1) * 100;
+    return this.roundRate(ea, 4);
+  }
+
+  /**
    * Cálculo de cuota fija con Sistema Francés
    * Cuota = P * [ i * (1+i)^n ] / [ (1+i)^n - 1 ]
    * Manejo robusto para amortizaciones con tasa cero (i = 0).
@@ -115,20 +144,13 @@ export class FinancialCalculatorV2 {
     effectiveAnnualRate: number,
     totalInstallments: number,
     monthlyInsurance = 0
-  ): Array<{
-    installmentNumber: number;
-    totalPayment: number;
-    principalPayment: number;
-    interestPayment: number;
-    insurancePayment: number;
-    remainingPrincipal: number;
-  }> {
+  ): AmortizationScheduleItem[] {
     if (principal <= 0 || totalInstallments <= 0) return [];
 
     const i = this.convertEaToMonthlyRate(effectiveAnnualRate);
     const fixedInstallment = this.calculateFrenchInstallment(principal, i, totalInstallments);
     let balanceCents = this.toCents(principal);
-    const schedule = [];
+    const schedule: AmortizationScheduleItem[] = [];
     const insuranceCents = this.toCents(monthlyInsurance);
 
     for (let k = 1; k <= totalInstallments; k++) {
@@ -162,6 +184,318 @@ export class FinancialCalculatorV2 {
     }
 
     return schedule;
+  }
+
+  /**
+   * Generación de tabla proyectada de amortización alemana (Cuota de Capital Constante).
+   * Características:
+   * - Abono a capital idéntico en cada período (principal / n).
+   * - Intereses decrecientes calculados sobre el saldo insoluto.
+   * - Cuota total decreciente período a período.
+   * - Ajuste de residuos de centavos en la última cuota para saldo final estrictamente 0.00.
+   */
+  static generateGermanAmortizationSchedule(
+    principal: number,
+    effectiveAnnualRate: number,
+    totalInstallments: number,
+    monthlyInsurance = 0
+  ): AmortizationScheduleItem[] {
+    if (principal <= 0 || totalInstallments <= 0) return [];
+
+    const i = this.convertEaToMonthlyRate(effectiveAnnualRate);
+    const totalPrincipalCents = this.toCents(principal);
+    const basePrincipalCents = Math.floor(totalPrincipalCents / totalInstallments);
+    let balanceCents = totalPrincipalCents;
+    const schedule: AmortizationScheduleItem[] = [];
+    const insuranceCents = this.toCents(monthlyInsurance);
+
+    for (let k = 1; k <= totalInstallments; k++) {
+      let interestCents = 0;
+      if (i > 0) {
+        const interestFloat = this.fromCents(balanceCents) * i;
+        interestCents = this.toCents(interestFloat);
+      }
+
+      let principalPartCents = basePrincipalCents;
+      if (k === totalInstallments || balanceCents <= principalPartCents) {
+        principalPartCents = balanceCents;
+      }
+
+      balanceCents = Math.max(0, balanceCents - principalPartCents);
+      const totalPayCents = principalPartCents + interestCents + insuranceCents;
+
+      schedule.push({
+        installmentNumber: k,
+        totalPayment: this.fromCents(totalPayCents),
+        principalPayment: this.fromCents(principalPartCents),
+        interestPayment: this.fromCents(interestCents),
+        insurancePayment: this.fromCents(insuranceCents),
+        remainingPrincipal: this.fromCents(balanceCents),
+      });
+
+      if (balanceCents === 0) break;
+    }
+
+    return schedule;
+  }
+
+  /**
+   * Simulador de Abonos Extraordinarios a Capital.
+   * Permite evaluar:
+   * 1. REDUCE_TERM: Mantiene el valor de la cuota mensual y reduce el plazo restante en meses.
+   * 2. REDUCE_INSTALLMENT: Mantiene el plazo restante en meses y disminuye la cuota mensual.
+   * Totalmente determinista y sin mutación de estado real.
+   */
+  static simulatePrepayment(
+    principal: number,
+    effectiveAnnualRate: number,
+    remainingInstallments: number,
+    prepaymentAmount: number,
+    strategy: 'REDUCE_TERM' | 'REDUCE_INSTALLMENT',
+    monthlyInsurance = 0
+  ): PrepaymentSimulationResult {
+    const cleanPrincipal = this.roundMoney(principal);
+    const cleanPrepayment = this.roundMoney(prepaymentAmount);
+
+    if (cleanPrincipal <= 0 || remainingInstallments <= 0) {
+      throw new Error('El saldo de capital y el plazo deben ser mayores a cero.');
+    }
+    if (cleanPrepayment <= 0) {
+      throw new Error('El abono extraordinario debe ser mayor a cero.');
+    }
+    if (cleanPrepayment > cleanPrincipal) {
+      throw new Error('El abono extraordinario no puede superar el saldo de capital actual.');
+    }
+
+    const baselineSchedule = this.generateFrenchAmortizationSchedule(
+      cleanPrincipal,
+      effectiveAnnualRate,
+      remainingInstallments,
+      monthlyInsurance
+    );
+    const originalInstallment = baselineSchedule.length > 0 ? baselineSchedule[0].totalPayment : 0;
+    const originalTotalInterest = this.roundMoney(
+      baselineSchedule.reduce((sum, item) => sum + item.interestPayment, 0)
+    );
+
+    const simulatedPrincipal = this.roundMoney(cleanPrincipal - cleanPrepayment);
+
+    if (simulatedPrincipal === 0) {
+      return {
+        previousPrincipal: cleanPrincipal,
+        simulatedPrincipal: 0,
+        prepaymentAmount: cleanPrepayment,
+        strategy,
+        originalInstallment,
+        newInstallment: 0,
+        originalRemainingInstallments: remainingInstallments,
+        newRemainingInstallments: 0,
+        originalTotalInterest,
+        newTotalInterest: 0,
+        estimatedInterestSavings: originalTotalInterest,
+      };
+    }
+
+    if (strategy === 'REDUCE_INSTALLMENT') {
+      const newSchedule = this.generateFrenchAmortizationSchedule(
+        simulatedPrincipal,
+        effectiveAnnualRate,
+        remainingInstallments,
+        monthlyInsurance
+      );
+      const newInstallment = newSchedule.length > 0 ? newSchedule[0].totalPayment : 0;
+      const newTotalInterest = this.roundMoney(
+        newSchedule.reduce((sum, item) => sum + item.interestPayment, 0)
+      );
+      const estimatedInterestSavings = this.roundMoney(
+        Math.max(0, originalTotalInterest - newTotalInterest)
+      );
+
+      return {
+        previousPrincipal: cleanPrincipal,
+        simulatedPrincipal,
+        prepaymentAmount: cleanPrepayment,
+        strategy,
+        originalInstallment,
+        newInstallment,
+        originalRemainingInstallments: remainingInstallments,
+        newRemainingInstallments: remainingInstallments,
+        originalTotalInterest,
+        newTotalInterest,
+        estimatedInterestSavings,
+      };
+    } else {
+      // REDUCE_TERM: Mantener la cuota objetivo de capital+interés del crédito original
+      const i = this.convertEaToMonthlyRate(effectiveAnnualRate);
+      const targetBaseInstallment = Math.max(0, originalInstallment - monthlyInsurance);
+      let balanceCents = this.toCents(simulatedPrincipal);
+      let monthsCount = 0;
+      let newTotalInterestCents = 0;
+
+      while (balanceCents > 0 && monthsCount < remainingInstallments) {
+        monthsCount++;
+        let interestCents = 0;
+        if (i > 0) {
+          const interestFloat = this.fromCents(balanceCents) * i;
+          interestCents = this.toCents(interestFloat);
+        }
+        newTotalInterestCents += interestCents;
+
+        let principalCents = this.toCents(targetBaseInstallment) - interestCents;
+        if (principalCents <= 0) {
+          principalCents = Math.min(balanceCents, Math.ceil(balanceCents / (remainingInstallments - monthsCount + 1)));
+        }
+
+        if (balanceCents <= principalCents) {
+          principalCents = balanceCents;
+        }
+        balanceCents -= principalCents;
+      }
+
+      const newTotalInterest = this.fromCents(newTotalInterestCents);
+      const estimatedInterestSavings = this.roundMoney(
+        Math.max(0, originalTotalInterest - newTotalInterest)
+      );
+
+      return {
+        previousPrincipal: cleanPrincipal,
+        simulatedPrincipal,
+        prepaymentAmount: cleanPrepayment,
+        strategy,
+        originalInstallment,
+        newInstallment: originalInstallment,
+        originalRemainingInstallments: remainingInstallments,
+        newRemainingInstallments: monthsCount,
+        originalTotalInterest,
+        newTotalInterest,
+        estimatedInterestSavings,
+      };
+    }
+  }
+
+  /**
+   * Simulador de Rediferidos / Reestructuración de Deuda.
+   * Compara de forma no destructiva el escenario actual frente al propuesto
+   * en cuotas, intereses y costo total.
+   */
+  static simulateRedeferred(
+    currentPrincipal: number,
+    currentEa: number,
+    currentRemainingInstallments: number,
+    proposedEa: number,
+    proposedInstallments: number,
+    monthlyInsurance = 0
+  ): RedeferredSimulationResult {
+    const cleanPrincipal = this.roundMoney(currentPrincipal);
+    if (cleanPrincipal <= 0 || currentRemainingInstallments <= 0 || proposedInstallments <= 0) {
+      throw new Error('El saldo de capital y los plazos deben ser mayores a cero.');
+    }
+
+    const currentSchedule = this.generateFrenchAmortizationSchedule(
+      cleanPrincipal,
+      currentEa,
+      currentRemainingInstallments,
+      monthlyInsurance
+    );
+    const currentInstallment = currentSchedule.length > 0 ? currentSchedule[0].totalPayment : 0;
+    const currentTotalInterest = this.roundMoney(
+      currentSchedule.reduce((sum, item) => sum + item.interestPayment, 0)
+    );
+    const currentTotalCost = this.roundMoney(
+      cleanPrincipal + currentTotalInterest + (monthlyInsurance * currentRemainingInstallments)
+    );
+
+    const proposedSchedule = this.generateFrenchAmortizationSchedule(
+      cleanPrincipal,
+      proposedEa,
+      proposedInstallments,
+      monthlyInsurance
+    );
+    const proposedInstallment = proposedSchedule.length > 0 ? proposedSchedule[0].totalPayment : 0;
+    const proposedTotalInterest = this.roundMoney(
+      proposedSchedule.reduce((sum, item) => sum + item.interestPayment, 0)
+    );
+    const proposedTotalCost = this.roundMoney(
+      cleanPrincipal + proposedTotalInterest + (monthlyInsurance * proposedInstallments)
+    );
+
+    return {
+      currentPrincipal: cleanPrincipal,
+      currentEa: this.roundMoney(currentEa),
+      currentInstallment,
+      currentRemainingInstallments,
+      currentTotalInterest,
+      currentTotalCost,
+      proposedEa: this.roundMoney(proposedEa),
+      proposedInstallment,
+      proposedInstallments,
+      proposedTotalInterest,
+      proposedTotalCost,
+      interestDifference: this.roundMoney(proposedTotalInterest - currentTotalInterest),
+      totalCostDifference: this.roundMoney(proposedTotalCost - currentTotalCost),
+    };
+  }
+
+  /**
+   * Cálculo determinista del extracto / pago mínimo mensual de una tarjeta de crédito
+   * a partir de sus compras diferidas activas y cuota de manejo pactada.
+   */
+  static calculateCreditCardStatement(
+    purchases: Array<{
+      id: string;
+      description: string;
+      originalAmount: number;
+      totalInstallments: number;
+      remainingInstallments: number;
+      interestRateMonthly: number;
+      status: 'PENDING' | 'PAID';
+    }>,
+    managementFee = 0
+  ): CreditCardStatementCalculation {
+    const activePurchases = purchases.filter(
+      (p) => p.status === 'PENDING' && p.remainingInstallments > 0
+    );
+
+    let totalCap = 0;
+    let totalInt = 0;
+    const breakdown = [];
+
+    for (const p of activePurchases) {
+      const capPart = this.roundMoney(p.originalAmount / p.totalInstallments);
+      const remainingPrincipal = this.roundMoney(capPart * p.remainingInstallments);
+
+      let intPart = 0;
+      if (p.interestRateMonthly > 0) {
+        intPart = this.roundMoney(remainingPrincipal * (p.interestRateMonthly / 100));
+      }
+
+      const totalItemPayment = this.roundMoney(capPart + intPart);
+
+      totalCap = this.roundMoney(totalCap + capPart);
+      totalInt = this.roundMoney(totalInt + intPart);
+
+      breakdown.push({
+        purchaseId: p.id,
+        description: p.description,
+        capitalPayment: capPart,
+        interestPayment: intPart,
+        totalPayment: totalItemPayment,
+        remainingInstallments: p.remainingInstallments,
+        remainingPrincipal,
+      });
+    }
+
+    const cleanFee = this.roundMoney(managementFee);
+    const totalStatementAmount = this.roundMoney(totalCap + totalInt + cleanFee);
+
+    return {
+      totalStatementAmount,
+      totalCapitalPayment: totalCap,
+      totalInterestPayment: totalInt,
+      managementFee: cleanFee,
+      activePurchasesCount: activePurchases.length,
+      purchasesBreakdown: breakdown,
+    };
   }
 
   /**
