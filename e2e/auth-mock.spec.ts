@@ -438,4 +438,161 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(page.locator('.waterfall-milestone.start')).toBeVisible();
     await expect(page.locator('.waterfall-milestone.end')).toBeVisible();
   });
+
+  test('Fase 3: Gestión de créditos, tablas de amortización francés/alemán con residuo cero y cuota mensual', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+
+    // 1. Navegar a Créditos
+    await page.getByRole('tab', { name: /créditos/i }).click();
+    await expect(page.locator('[data-testid="credits-manager"]')).toBeVisible();
+
+    // 2. Verificar Crédito A y B preconfigurados
+    const creditCardA = page.locator('.credit-card', { hasText: 'Crédito Vehículo Occidente' });
+    const creditCardB = page.locator('.credit-card', { hasText: 'Crédito Educativo Convenio 0%' });
+    await expect(creditCardA).toBeVisible();
+    await expect(creditCardB).toBeVisible();
+
+    // 3. Abrir Tabla de Amortización para Crédito A
+    await creditCardA.locator('[data-testid="btn-view-schedule"]').click();
+    await expect(page.locator('[data-testid="amortization-table-container"]')).toBeVisible();
+
+    // Verificar Sistema Francés por defecto
+    await expect(page.locator('[data-testid="toggle-french"]')).toHaveClass(/active/);
+    const tableRows = page.locator('[data-testid="amortization-table"] tbody tr');
+    await expect(tableRows.first()).toBeVisible();
+    // La última cuota debe tener residuo de capital exactamente $ 0,00
+    const lastRowRemaining = tableRows.last().locator('td').last();
+    await expect(lastRowRemaining).toContainText('0,00');
+
+    // Cambiar a Sistema Alemán
+    await page.locator('[data-testid="toggle-german"]').click();
+    await expect(page.locator('[data-testid="toggle-german"]')).toHaveClass(/active/);
+    const germanRows = page.locator('[data-testid="amortization-table"] tbody tr');
+    await expect(germanRows.first()).toBeVisible();
+    await expect(germanRows.last().locator('td').last()).toContainText('0,00');
+
+    // Cerrar modal
+    await page.locator('.modal-close').click();
+
+    // 4. Integrar Cuota Mensual a Obligaciones usando Crédito B (sin cuota preexistente en el mes)
+    await creditCardB.locator('[data-testid="btn-generate-installment"]').click();
+    await expect(page.locator('[data-testid="credit-action-alert"]')).toContainText('integrada exitosamente');
+
+    // Reintento idempotente: no debe duplicar la obligación
+    await creditCardB.locator('[data-testid="btn-generate-installment"]').click();
+    await expect(page.locator('[data-testid="credit-action-alert"]')).toContainText('ya fue generada previamente');
+
+    // Verificar en pestaña de Obligaciones
+    await page.getByRole('tab', { name: /obligaciones/i }).click();
+    await expect(page.locator('.obligation-card', { hasText: 'Crédito Educativo' })).toBeVisible();
+  });
+
+  test('Fase 3: Tarjetas de crédito, compras diferidas, control de cupo disponible y liquidación', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+
+    // 1. Navegar a Tarjetas
+    await page.getByRole('tab', { name: /tarjetas/i }).click();
+    await expect(page.locator('[data-testid="credit-cards-manager"]')).toBeVisible();
+
+    // 2. Verificar Tarjeta A y B
+    const cardPanelA = page.locator('.credit-card-panel', { hasText: 'Tarjeta Visa Platinum' });
+    const cardPanelB = page.locator('.credit-card-panel', { hasText: 'Tarjeta Mastercard Black' });
+    await expect(cardPanelA).toBeVisible();
+    await expect(cardPanelB).toBeVisible();
+
+    // Verificar compras diferidas asociadas a Tarjeta A
+    await expect(cardPanelA.locator('.purchase-item', { hasText: 'MacBook Pro Trabajo' })).toBeVisible();
+    await expect(cardPanelA.locator('.purchase-item', { hasText: 'Mercado Mensual Supermercado' })).toBeVisible();
+
+    // 3. Intento de compra superior al cupo disponible
+    await cardPanelA.locator('[data-testid="btn-add-purchase"]').click();
+    await expect(page.locator('.modal-card')).toBeVisible();
+
+    await page.locator('#purchase-desc').fill('Compra Excedida');
+    await page.locator('#purchase-amount').fill('90000000'); // Muy superior al cupo
+    await page.locator('#purchase-installments').fill('12');
+    await page.locator('#purchase-rate').fill('2.0');
+    await page.locator('[data-testid="btn-submit-purchase"]').click();
+
+    // Debe mostrar error de cupo insuficiente y no cerrar modal
+    await expect(page.locator('[data-testid="card-action-alert"]')).toContainText(
+      'excede el cupo disponible de la tarjeta'
+    );
+
+    // 4. Compra válida dentro de cupo
+    await page.locator('#purchase-desc').fill('Audífonos Bluetooth');
+    await page.locator('#purchase-amount').fill('300000');
+    await page.locator('[data-testid="btn-submit-purchase"]').click();
+    await expect(page.locator('[data-testid="card-action-alert"]')).toContainText('registrada exitosamente');
+    await expect(cardPanelA.locator('.purchase-item', { hasText: 'Audífonos Bluetooth' })).toBeVisible();
+
+    // 5. Generar extracto / cuota mensual
+    await cardPanelA.locator('[data-testid="btn-generate-statement"]').click();
+    await expect(page.locator('[data-testid="card-action-alert"]')).toContainText('integrado exitosamente');
+
+    // Reintento idempotente
+    await cardPanelA.locator('[data-testid="btn-generate-statement"]').click();
+    await expect(page.locator('[data-testid="card-action-alert"]')).toContainText('ya fue generado previamente');
+  });
+
+  test('Fase 3: Simuladores de abonos extraordinarios (plazo vs cuota) y rediferidos sin alterar saldos reales', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+
+    // 1. Navegar a Simuladores
+    await page.getByRole('tab', { name: /simuladores/i }).click();
+    await expect(page.locator('[data-testid="financial-simulators"]')).toBeVisible();
+    await expect(page.locator('.disclaimer-banner')).toBeVisible();
+
+    // 2. Simulación de Abono Extraordinario - Reducción de Plazo
+    await page.locator('[data-testid="input-prepayment-amount"]').fill('5000000');
+    await page.locator('[data-testid="radio-reduce-term"]').check();
+    await page.locator('[data-testid="btn-run-prepayment"]').click();
+
+    await expect(page.locator('[data-testid="prepayment-results"]')).toBeVisible();
+    await expect(page.locator('[data-testid="prepayment-interest-savings"]')).toBeVisible();
+
+    // 3. Simulación de Abono Extraordinario - Reducción de Cuota
+    await page.locator('[data-testid="radio-reduce-installment"]').check();
+    await page.locator('[data-testid="btn-run-prepayment"]').click();
+    await expect(page.locator('[data-testid="prepayment-results"]')).toBeVisible();
+
+    // 4. Simulación de Rediferido
+    await page.locator('[data-testid="tab-redeferred"]').click();
+    await expect(page.locator('[data-testid="redeferred-simulator-view"]')).toBeVisible();
+
+    await page.locator('[data-testid="input-proposed-installments"]').fill('36');
+    await page.locator('[data-testid="input-proposed-rate"]').fill('20.5');
+    await page.locator('[data-testid="btn-run-redeferred"]').click();
+
+    await expect(page.locator('[data-testid="redeferred-results"]')).toBeVisible();
+    await expect(page.locator('[data-testid="redeferred-cost-diff"]')).toBeVisible();
+
+    // 5. Validar que los saldos reales no sufrieron modificaciones
+    await page.getByRole('tab', { name: /créditos/i }).click();
+    const creditCardA = page.locator('.credit-card', { hasText: 'Crédito Vehículo Occidente' });
+    await expect(creditCardA.locator('[data-testid="credit-principal-balance"]')).toContainText('32.000.000,00');
+  });
+
+  test('Fase 3: Dashboard financiero con separación de capital, cuotas exigibles, cupos y costos futuros', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+
+    // Validar KPIs en el dashboard
+    await expect(page.locator('.kpi-card.real-balance')).toBeVisible();
+    await expect(page.locator('.kpi-card.principal-debt')).toBeVisible();
+    await expect(page.locator('[data-testid="dashboard-total-debt"]')).toBeVisible();
+    await expect(page.locator('[data-testid="dashboard-available-credit"]')).toBeVisible();
+    await expect(page.locator('[data-testid="dashboard-projected-interest"]')).toBeVisible();
+
+    // Verificar que no haya overflow horizontal en la ventana
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
 });
+
