@@ -1,0 +1,1367 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Personal Finance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ── DARK-FIRST TOKENS ── */
+:root {
+  --bg:   #0C1018;
+  --s1:   #131A26;
+  --s2:   #1A2234;
+  --s3:   #212B3C;
+  --bd:   #243047;
+  --bd2:  #1A2535;
+
+  --amber:     #D4A017;
+  --amber-bg:  rgba(212,160,23,.10);
+  --amber-dim: rgba(212,160,23,.28);
+
+  --green:    #22C55E;
+  --green-bg: rgba(34,197,94,.08);
+  --red:      #EF4444;
+  --red-bg:   rgba(239,68,68,.08);
+
+  --t1: #EDF0F4;
+  --t2: #8894A4;
+  --t3: #4A5568;
+
+  --ff:   'Inter', system-ui, sans-serif;
+  --fd:   'Syne', system-ui, sans-serif;
+  --fm:   'DM Mono', monospace;
+  --r:    12px;
+  --rsm:  8px;
+  --rlg:  18px;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:   #F3F5FA;
+    --s1:   #FFFFFF;
+    --s2:   #EBEEf5;
+    --s3:   #E2E7F0;
+    --bd:   #D8DEEC;
+    --bd2:  #E8ECF5;
+    --amber:     #A07000;
+    --amber-bg:  rgba(160,112,0,.08);
+    --amber-dim: rgba(160,112,0,.25);
+    --green:    #16A34A;
+    --green-bg: rgba(22,163,74,.08);
+    --red:      #DC2626;
+    --red-bg:   rgba(220,38,38,.08);
+    --t1: #0F1117;
+    --t2: #56637A;
+    --t3: #9CA3AF;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #F3F5FA; --s1: #FFFFFF; --s2: #EBEEf5; --s3: #E2E7F0;
+  --bd: #D8DEEC; --bd2: #E8ECF5;
+  --amber: #A07000; --amber-bg: rgba(160,112,0,.08); --amber-dim: rgba(160,112,0,.25);
+  --green: #16A34A; --green-bg: rgba(22,163,74,.08);
+  --red: #DC2626; --red-bg: rgba(220,38,38,.08);
+  --t1: #0F1117; --t2: #56637A; --t3: #9CA3AF;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ff);
+  background: var(--bg);
+  color: var(--t1);
+  min-height: 100%;
+  padding-block: env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px);
+  padding-left:  max(16px, env(safe-area-inset-left,0px));
+  padding-right: max(16px, env(safe-area-inset-right,0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* ── PAGE WRAPPER ── */
+.page {
+  width: 100%;
+  max-width: 860px;
+  padding-top: 28px;
+  padding-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.proto-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t3);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.proto-title {
+  font-family: var(--fd);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin-top: 4px;
+  color: var(--t1);
+}
+
+.proto-sub {
+  font-size: 13px;
+  color: var(--t2);
+  margin-top: 4px;
+  max-width: 52ch;
+  line-height: 1.5;
+}
+
+/* ── SCREEN TABS ── */
+.tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tab-btn {
+  padding: 6px 14px;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: 20px;
+  color: var(--t2);
+  font-family: var(--ff);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.tab-btn:hover { border-color: var(--amber-dim); color: var(--t1); }
+.tab-btn.active { background: var(--amber-bg); border-color: var(--amber-dim); color: var(--amber); }
+
+/* ── DEVICE FRAME ── */
+.device-outer {
+  display: flex;
+  justify-content: center;
+}
+
+.device {
+  width: 390px;
+  max-width: 100%;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 48px;
+  border: 1.5px solid var(--bd);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 0 7px var(--s2), 0 30px 90px -10px rgba(0,0,0,.55);
+  flex-shrink: 0;
+}
+
+/* Notch */
+.device::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 130px; height: 34px;
+  background: var(--s2);
+  border-radius: 0 0 22px 22px;
+  z-index: 20;
+}
+
+/* ── SCREENS ── */
+.screen {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ── STATUS BAR ── */
+.sbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 46px 22px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  color: var(--t1);
+}
+.sbar-r { display: flex; gap: 5px; align-items: center; }
+
+/* ── BOTTOM NAV ── */
+.bnav {
+  display: flex;
+  background: var(--s1);
+  border-top: 1px solid var(--bd);
+  padding: 6px 0 26px;
+  flex-shrink: 0;
+}
+.bn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.bn-ico { font-size: 22px; line-height: 1; }
+.bn-lbl { font-size: 10px; font-weight: 500; color: var(--t3); }
+.bn-item.active .bn-lbl { color: var(--amber); }
+
+/* ── REUSABLE ── */
+.px16 { padding-left: 16px; padding-right: 16px; }
+.mb8 { margin-bottom: 8px; }
+.mb14 { margin-bottom: 14px; }
+.mb20 { margin-bottom: 20px; }
+
+.money { font-family: var(--fm); font-variant-numeric: tabular-nums; }
+
+.sh-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.sh-title { font-size: 13px; font-weight: 600; }
+.sh-link { font-size: 12px; color: var(--amber); font-weight: 500; cursor: pointer; }
+
+.card {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 14px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.pill-g { background: var(--green-bg); color: var(--green); }
+.pill-r { background: var(--red-bg); color: var(--red); }
+.pill-a { background: var(--amber-bg); color: var(--amber); }
+
+/* ─────────────────────────
+   SCREEN 1 · LOGIN
+───────────────────────── */
+#s-login .login-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 32px 24px 40px;
+}
+
+.app-wordmark {
+  font-family: var(--fd);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin-bottom: 4px;
+}
+.app-wordmark em { color: var(--amber); font-style: normal; }
+
+.app-sub {
+  font-size: 14px;
+  color: var(--t2);
+  line-height: 1.4;
+  margin-bottom: 36px;
+}
+
+.fg {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.fg label { font-size: 12px; font-weight: 500; color: var(--t2); }
+.fg .fi {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--rsm);
+  padding: 13px 14px;
+  font-size: 15px;
+  color: var(--t2);
+  font-family: var(--ff);
+}
+.fg .fi.filled { color: var(--t1); }
+
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+  margin-top: -4px;
+}
+.fgt { font-size: 12px; color: var(--t3); cursor: pointer; }
+
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--amber);
+  border: none;
+  border-radius: var(--rsm);
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: #0C1018;
+  cursor: pointer;
+}
+
+.login-foot {
+  text-align: center;
+  font-size: 13px;
+  color: var(--t3);
+  margin-top: 24px;
+}
+.login-foot span { color: var(--amber); font-weight: 600; cursor: pointer; }
+
+/* ─────────────────────────
+   SCREEN 2 · DASHBOARD
+───────────────────────── */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 16px 14px;
+  flex-shrink: 0;
+}
+
+.greet-name {
+  font-family: var(--fd);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.greet-sub { font-size: 12px; color: var(--t2); margin-top: 2px; }
+
+.avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--fd);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+
+.period-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.pa { color: var(--t3); font-size: 9px; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.kpi {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 14px;
+}
+.kpi.k-g { border-color: rgba(34,197,94,.25); }
+.kpi.k-r { border-color: rgba(239,68,68,.22); }
+.kpi.k-a { border-color: rgba(212,160,23,.25); }
+
+.kpi-lbl { font-size: 11px; color: var(--t2); line-height: 1.3; margin-bottom: 6px; }
+.kpi-val { font-size: 16px; font-weight: 500; }
+.kpi.k-g .kpi-val { color: var(--green); }
+.kpi.k-r .kpi-val { color: var(--red); }
+.kpi.k-a .kpi-val { color: var(--amber); }
+
+.credit-item {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 13px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.credit-item:hover { border-color: var(--amber-dim); }
+
+.ci-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.ci-name { font-size: 13px; font-weight: 600; }
+.ci-meta { display: flex; gap: 16px; margin-bottom: 10px; }
+.ci-m label { display: block; font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 3px; }
+.ci-m span { font-family: var(--fm); font-size: 12px; }
+
+.pbar {
+  height: 3px;
+  background: var(--bd);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pbar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--amber);
+}
+.pbar-sub { font-size: 9px; color: var(--t3); margin-top: 3px; }
+
+/* ─────────────────────────
+   SCREEN 3 · CRÉDITOS
+───────────────────────── */
+.scr-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 14px;
+  flex-shrink: 0;
+}
+.back-btn {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--t2);
+}
+.scr-title {
+  font-family: var(--fd);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ─────────────────────────
+   SCREEN 4 · DETALLE
+───────────────────────── */
+.credit-hero {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--rlg);
+  padding: 16px;
+  margin: 0 16px 12px;
+}
+.ch-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.ch-name { font-family: var(--fd); font-size: 15px; font-weight: 700; }
+.ch-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.cs label { display: block; font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+.cs value { font-family: var(--fm); font-size: 12px; color: var(--t1); display: block; }
+
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--bd);
+  padding: 10px 16px 0;
+  gap: 0;
+  flex-shrink: 0;
+}
+.tn {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t3);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color .15s;
+}
+.tn.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+.amort {
+  width: 100%;
+  border-collapse: collapse;
+}
+.amort th {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  text-align: right;
+  padding: 8px 6px 8px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.amort th:first-child { text-align: left; padding-left: 0; }
+.amort td {
+  font-family: var(--fm);
+  font-size: 11px;
+  color: var(--t2);
+  text-align: right;
+  padding: 8px 6px 8px 0;
+  border-bottom: 1px solid var(--bd2);
+}
+.amort td:first-child { text-align: left; font-family: var(--ff); font-size: 11px; color: var(--t3); padding-left: 0; }
+.amort tr.now td { color: var(--t1); }
+.amort tr.now td:first-child { color: var(--amber); font-weight: 600; font-family: var(--ff); }
+
+/* ─────────────────────────
+   SCREEN 5 · TARJETAS
+───────────────────────── */
+.tarjeta {
+  background: linear-gradient(140deg, #1A2234 0%, #222C40 60%, #1E2A3C 100%);
+  border: 1px solid var(--bd);
+  border-radius: 20px;
+  padding: 22px 20px 20px;
+  margin: 0 16px 16px;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1.586;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.tarjeta::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-dim);
+}
+.t-bank { font-family: var(--fd); font-size: 14px; font-weight: 700; color: var(--amber); }
+.t-num { font-family: var(--fm); font-size: 15px; letter-spacing: .15em; color: var(--t2); }
+.t-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+.t-holder { font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.t-net { font-size: 24px; }
+
+.cupo-card {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.cupo-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.cupo-lbl { font-size: 12px; color: var(--t2); }
+.cupo-val { font-family: var(--fm); font-size: 13px; font-weight: 500; }
+.cupo-val.cg { color: var(--green); }
+.cupo-val.cr { color: var(--red); }
+.cupo-bar { height: 7px; background: var(--bd); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.cupo-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--red), #FF7070); }
+
+.dif-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--bd2);
+}
+.dif-item:last-child { border-bottom: none; }
+.di-l { flex: 1; min-width: 0; }
+.di-name { font-size: 13px; font-weight: 500; }
+.di-meta { font-size: 10px; color: var(--t3); margin-top: 2px; }
+.di-r { text-align: right; flex-shrink: 0; padding-left: 12px; }
+.di-cuota { font-family: var(--fm); font-size: 13px; color: var(--amber); }
+.di-total { font-size: 10px; color: var(--t3); margin-top: 1px; }
+
+/* ─────────────────────────
+   SCREEN 6 · SIMULADOR
+───────────────────────── */
+.sim-pick {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.sp-lbl { font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.sp-val { font-size: 14px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+
+.sim-lbl { font-size: 12px; color: var(--t2); font-weight: 500; margin-bottom: 6px; }
+.sim-inp {
+  background: var(--s1);
+  border: 1.5px solid var(--amber-dim);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.si-cur { font-size: 20px; color: var(--t3); }
+.si-val { font-family: var(--fm); font-size: 32px; font-weight: 500; color: var(--t1); }
+
+.toggle-row {
+  display: flex;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.tog {
+  flex: 1;
+  text-align: center;
+  padding: 11px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t3);
+  cursor: pointer;
+}
+.tog.active { background: var(--amber-bg); color: var(--amber); }
+
+.sim-result {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 16px;
+}
+.sr-eyebrow { font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px; }
+.sr-grid { display: grid; grid-template-columns: 1fr 28px 1fr; align-items: start; gap: 6px; }
+.sr-col-lbl { font-size: 10px; font-weight: 600; margin-bottom: 10px; }
+.sr-col-lbl.before { color: var(--t3); }
+.sr-col-lbl.after { color: var(--green); }
+.sr-stat + .sr-stat { margin-top: 10px; }
+.sr-stat label { display: block; font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.sr-stat value { font-family: var(--fm); font-size: 13px; color: var(--t1); display: block; }
+.sr-col.after .sr-stat value { color: var(--green); }
+.sr-arrow { display: flex; align-items: center; justify-content: center; padding-top: 20px; color: var(--t3); font-size: 16px; }
+
+.btn-sim {
+  width: 100%;
+  padding: 14px;
+  background: var(--amber);
+  border: none;
+  border-radius: var(--rsm);
+  font-family: var(--fd);
+  font-size: 15px;
+  font-weight: 700;
+  color: #0C1018;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+/* ── ANNOTATION (desktop) ── */
+.annotations {
+  display: none;
+}
+@media (min-width: 700px) {
+  .proto-layout { display: flex; gap: 32px; align-items: flex-start; }
+  .device-outer { flex-shrink: 0; }
+  .annotations { display: flex; flex-direction: column; gap: 14px; flex: 1; padding-top: 60px; }
+}
+
+.ann {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  padding: 14px;
+}
+.ann-num { font-family: var(--fd); font-size: 22px; font-weight: 800; color: var(--amber); margin-bottom: 4px; }
+.ann-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.ann-body { font-size: 12px; color: var(--t2); line-height: 1.5; }
+</style>
+
+<div class="page">
+
+  <div>
+    <div class="proto-eyebrow">Wireframe UX-01</div>
+    <div class="proto-title">Personal Finance — Rediseño</div>
+    <div class="proto-sub">Prototipo interactivo. Elige una pantalla y navega con los tabs inferiores. Cero cambios en el código del repositorio.</div>
+  </div>
+
+  <div class="tabs-row" id="screenTabs">
+    <button class="tab-btn active" data-target="s-login">Inicio de sesión</button>
+    <button class="tab-btn" data-target="s-dash">Dashboard</button>
+    <button class="tab-btn" data-target="s-creditos">Créditos</button>
+    <button class="tab-btn" data-target="s-detalle">Detalle crédito</button>
+    <button class="tab-btn" data-target="s-tarjetas">Tarjetas</button>
+    <button class="tab-btn" data-target="s-sim">Simulador</button>
+  </div>
+
+  <div class="proto-layout">
+    <div class="device-outer">
+      <div class="device">
+
+        <!-- ── SCREEN: LOGIN ── -->
+        <div class="screen active" id="s-login">
+          <div class="sbar">
+            <span>9:41</span>
+            <div class="sbar-r">
+              <span>●●●</span><span>▲</span><span>⬛</span>
+            </div>
+          </div>
+
+          <div class="login-body">
+            <div class="app-wordmark">personal<em>.</em></div>
+            <div class="app-sub">Tu estado financiero real, siempre a mano.</div>
+
+            <div class="fg">
+              <label>Correo electrónico</label>
+              <div class="fi filled">yamid@ejemplo.com</div>
+            </div>
+
+            <div class="fg">
+              <label>Contraseña</label>
+              <div class="fi">••••••••••</div>
+            </div>
+
+            <div class="forgot-row">
+              <span class="fgt">¿Olvidaste tu contraseña?</span>
+            </div>
+
+            <button class="btn-primary">Ingresar</button>
+
+            <div class="login-foot">¿No tienes cuenta? <span>Regístrate</span></div>
+          </div>
+        </div>
+
+        <!-- ── SCREEN: DASHBOARD ── -->
+        <div class="screen" id="s-dash">
+          <div class="sbar">
+            <span>9:41</span>
+            <div class="sbar-r"><span>●●●</span><span>▲</span><span>⬛</span></div>
+          </div>
+
+          <div class="dash-header">
+            <div>
+              <div class="greet-name">Hola, Yamid</div>
+              <div class="greet-sub">Tu resumen de octubre 2026</div>
+            </div>
+            <div class="avatar">YC</div>
+          </div>
+
+          <div class="px16" style="flex-shrink:0;">
+            <div class="period-pill">
+              <span class="pa">◀</span>
+              <span>Octubre 2026</span>
+              <span class="pa">▶</span>
+            </div>
+          </div>
+
+          <div class="scroll-area">
+            <div class="px16">
+              <div class="kpi-grid">
+                <div class="kpi k-g">
+                  <div class="kpi-lbl">Liquidez disponible</div>
+                  <div class="kpi-val money">$2.340.000</div>
+                </div>
+                <div class="kpi k-r">
+                  <div class="kpi-lbl">Deuda de capital</div>
+                  <div class="kpi-val money">$18.500.000</div>
+                </div>
+                <div class="kpi k-a">
+                  <div class="kpi-lbl">Cuota exigible oct.</div>
+                  <div class="kpi-val money">$1.125.000</div>
+                </div>
+                <div class="kpi">
+                  <div class="kpi-lbl">Costo financiero</div>
+                  <div class="kpi-val money" style="color:var(--t2)">$340.000</div>
+                </div>
+              </div>
+
+              <!-- Créditos mini -->
+              <div class="sh-row">
+                <span class="sh-title">Mis créditos</span>
+                <span class="sh-link" data-goto="s-creditos">Ver todos</span>
+              </div>
+
+              <div class="credit-item" data-goto="s-detalle">
+                <div class="ci-top">
+                  <span class="ci-name">Libre inversión</span>
+                  <span class="pill pill-g">Al día</span>
+                </div>
+                <div class="ci-meta">
+                  <div class="ci-m">
+                    <label>Saldo</label>
+                    <span class="money">$12.400.000</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Prox. cuota</label>
+                    <span class="money">$890.000</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Fecha</label>
+                    <span>15 nov</span>
+                  </div>
+                </div>
+                <div class="pbar"><div class="pbar-fill" style="width:33%"></div></div>
+                <div class="pbar-sub">12 de 36 cuotas pagadas</div>
+              </div>
+
+              <div class="credit-item" data-goto="s-detalle" style="margin-bottom:24px">
+                <div class="ci-top">
+                  <span class="ci-name">Crédito vehicular</span>
+                  <span class="pill pill-g">Al día</span>
+                </div>
+                <div class="ci-meta">
+                  <div class="ci-m">
+                    <label>Saldo</label>
+                    <span class="money">$6.100.000</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Prox. cuota</label>
+                    <span class="money">$235.000</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Fecha</label>
+                    <span>20 nov</span>
+                  </div>
+                </div>
+                <div class="pbar"><div class="pbar-fill" style="width:13%"></div></div>
+                <div class="pbar-sub">8 de 60 cuotas pagadas</div>
+              </div>
+
+              <!-- Tarjeta mini -->
+              <div class="sh-row">
+                <span class="sh-title">Tarjetas</span>
+                <span class="sh-link" data-goto="s-tarjetas">Ver</span>
+              </div>
+
+              <div class="card mb20" style="cursor:pointer" data-goto="s-tarjetas">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <span style="font-size:13px;font-weight:600">Visa Clásica · Bancolombia</span>
+                  <span class="pill pill-r">56% usado</span>
+                </div>
+                <div class="cupo-bar" style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:6px">
+                  <div style="width:56%;height:100%;border-radius:3px;background:var(--red)"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3)">
+                  <span class="money">$2.800.000 usado</span>
+                  <span class="money">$2.200.000 disponible</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <nav class="bnav">
+            <div class="bn-item active" data-goto="s-dash">
+              <div class="bn-ico">⌂</div>
+              <div class="bn-lbl">Inicio</div>
+            </div>
+            <div class="bn-item" data-goto="s-creditos">
+              <div class="bn-ico">📋</div>
+              <div class="bn-lbl">Créditos</div>
+            </div>
+            <div class="bn-item" data-goto="s-tarjetas">
+              <div class="bn-ico">💳</div>
+              <div class="bn-lbl">Tarjetas</div>
+            </div>
+            <div class="bn-item" data-goto="s-sim">
+              <div class="bn-ico">⚡</div>
+              <div class="bn-lbl">Simular</div>
+            </div>
+          </nav>
+        </div>
+
+        <!-- ── SCREEN: CRÉDITOS ── -->
+        <div class="screen" id="s-creditos">
+          <div class="sbar">
+            <span>9:41</span>
+            <div class="sbar-r"><span>●●●</span><span>▲</span><span>⬛</span></div>
+          </div>
+
+          <div class="scr-header">
+            <div class="back-btn" data-goto="s-dash">‹</div>
+            <div class="scr-title">Créditos</div>
+          </div>
+
+          <div class="scroll-area">
+            <div class="px16">
+              <!-- Summary strip -->
+              <div class="card mb14" style="display:flex;gap:0;padding:0;overflow:hidden">
+                <div style="flex:1;padding:12px 14px;border-right:1px solid var(--bd)">
+                  <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Deuda total</div>
+                  <div class="money" style="font-size:15px;font-weight:500;color:var(--red)">$18.500.000</div>
+                </div>
+                <div style="flex:1;padding:12px 14px">
+                  <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Cuota mensual</div>
+                  <div class="money" style="font-size:15px;font-weight:500;color:var(--amber)">$1.125.000</div>
+                </div>
+              </div>
+
+              <div class="sh-row">
+                <span class="sh-title">Activos</span>
+                <span class="sh-link">+ Nuevo</span>
+              </div>
+
+              <!-- Credit 1 -->
+              <div class="credit-item" data-goto="s-detalle">
+                <div class="ci-top">
+                  <div>
+                    <div class="ci-name">Libre inversión</div>
+                    <div style="font-size:10px;color:var(--t3);margin-top:2px">Bancolombia · Francesa</div>
+                  </div>
+                  <span class="pill pill-g">Al día</span>
+                </div>
+                <div class="ci-meta">
+                  <div class="ci-m">
+                    <label>Saldo capital</label>
+                    <span class="money">$12.400.000</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Tasa EA</label>
+                    <span>22,4%</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Próx. cuota</label>
+                    <span class="money">$890.000</span>
+                  </div>
+                </div>
+                <div class="pbar"><div class="pbar-fill" style="width:33%"></div></div>
+                <div class="pbar-sub" style="display:flex;justify-content:space-between">
+                  <span>12 / 36 cuotas</span>
+                  <span style="color:var(--amber)">15 nov →</span>
+                </div>
+              </div>
+
+              <!-- Credit 2 -->
+              <div class="credit-item" data-goto="s-detalle">
+                <div class="ci-top">
+                  <div>
+                    <div class="ci-name">Crédito vehicular</div>
+                    <div style="font-size:10px;color:var(--t3);margin-top:2px">Davivienda · Alemana</div>
+                  </div>
+                  <span class="pill pill-g">Al día</span>
+                </div>
+                <div class="ci-meta">
+                  <div class="ci-m">
+                    <label>Saldo capital</label>
+                    <span class="money">$6.100.000</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Tasa EA</label>
+                    <span>18,2%</span>
+                  </div>
+                  <div class="ci-m">
+                    <label>Próx. cuota</label>
+                    <span class="money">$235.000</span>
+                  </div>
+                </div>
+                <div class="pbar"><div class="pbar-fill" style="width:13%"></div></div>
+                <div class="pbar-sub" style="display:flex;justify-content:space-between">
+                  <span>8 / 60 cuotas</span>
+                  <span style="color:var(--amber)">20 nov →</span>
+                </div>
+              </div>
+
+              <div style="height:20px"></div>
+            </div>
+          </div>
+
+          <nav class="bnav">
+            <div class="bn-item" data-goto="s-dash"><div class="bn-ico">⌂</div><div class="bn-lbl">Inicio</div></div>
+            <div class="bn-item active" data-goto="s-creditos"><div class="bn-ico">📋</div><div class="bn-lbl">Créditos</div></div>
+            <div class="bn-item" data-goto="s-tarjetas"><div class="bn-ico">💳</div><div class="bn-lbl">Tarjetas</div></div>
+            <div class="bn-item" data-goto="s-sim"><div class="bn-ico">⚡</div><div class="bn-lbl">Simular</div></div>
+          </nav>
+        </div>
+
+        <!-- ── SCREEN: DETALLE CRÉDITO ── -->
+        <div class="screen" id="s-detalle">
+          <div class="sbar">
+            <span>9:41</span>
+            <div class="sbar-r"><span>●●●</span><span>▲</span><span>⬛</span></div>
+          </div>
+
+          <div class="scr-header">
+            <div class="back-btn" data-goto="s-creditos">‹</div>
+            <div class="scr-title">Libre inversión</div>
+          </div>
+
+          <div class="credit-hero">
+            <div class="ch-top">
+              <div class="ch-name">Bancolombia</div>
+              <span class="pill pill-g">Al día</span>
+            </div>
+            <div class="ch-stats">
+              <div class="cs">
+                <label>Saldo capital</label>
+                <value class="money">$12.400.000</value>
+              </div>
+              <div class="cs">
+                <label>Tasa EA</label>
+                <value>22,4%</value>
+              </div>
+              <div class="cs">
+                <label>Cuotas rest.</label>
+                <value>24 de 36</value>
+              </div>
+              <div class="cs" style="margin-top:10px">
+                <label>Próx. cuota</label>
+                <value class="money" style="color:var(--amber)">$890.000</value>
+              </div>
+              <div class="cs" style="margin-top:10px">
+                <label>Vence</label>
+                <value>15 nov 2026</value>
+              </div>
+              <div class="cs" style="margin-top:10px">
+                <label>Amortización</label>
+                <value>Francesa</value>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-nav">
+            <div class="tn active">Tabla</div>
+            <div class="tn">Simular abono</div>
+            <div class="tn">Detalle</div>
+          </div>
+
+          <div class="scroll-area">
+            <div class="px16" style="padding-top:12px">
+              <table class="amort">
+                <thead>
+                  <tr>
+                    <th>Cuota</th>
+                    <th>Capital</th>
+                    <th>Interés</th>
+                    <th>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>10</td><td>470.000</td><td>420.000</td><td>13.280.000</td></tr>
+                  <tr><td>11</td><td>479.000</td><td>411.000</td><td>12.801.000</td></tr>
+                  <tr><td>12</td><td>488.000</td><td>402.000</td><td>12.400.000</td></tr>
+                  <tr class="now"><td>13 ← hoy</td><td>497.000</td><td>393.000</td><td>11.903.000</td></tr>
+                  <tr><td>14</td><td>506.000</td><td>384.000</td><td>11.397.000</td></tr>
+                  <tr><td>15</td><td>515.000</td><td>375.000</td><td>10.882.000</td></tr>
+                  <tr><td>16</td><td>525.000</td><td>365.000</td><td>10.357.000</td></tr>
+                </tbody>
+              </table>
+              <div style="text-align:center;padding:10px 0;font-size:11px;color:var(--t3)">Cuotas 17–36 · toca para expandir</div>
+
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
+                <button style="width:100%;padding:12px;background:var(--amber-bg);border:1px solid var(--amber-dim);border-radius:var(--rsm);font-family:var(--fd);font-size:13px;font-weight:700;color:var(--amber);cursor:pointer" data-goto="s-sim">
+                  ⚡ Simular abono extraordinario
+                </button>
+              </div>
+              <div style="height:20px"></div>
+            </div>
+          </div>
+
+          <nav class="bnav">
+            <div class="bn-item" data-goto="s-dash"><div class="bn-ico">⌂</div><div class="bn-lbl">Inicio</div></div>
+            <div class="bn-item active" data-goto="s-creditos"><div class="bn-ico">📋</div><div class="bn-lbl">Créditos</div></div>
+            <div class="bn-item" data-goto="s-tarjetas"><div class="bn-ico">💳</div><div class="bn-lbl">Tarjetas</div></div>
+            <div class="bn-item" data-goto="s-sim"><div class="bn-ico">⚡</div><div class="bn-lbl">Simular</div></div>
+          </nav>
+        </div>
+
+        <!-- ── SCREEN: TARJETAS ── -->
+        <div class="screen" id="s-tarjetas">
+          <div class="sbar">
+            <span>9:41</span>
+            <div class="sbar-r"><span>●●●</span><span>▲</span><span>⬛</span></div>
+          </div>
+
+          <div class="scr-header">
+            <div class="back-btn" data-goto="s-dash">‹</div>
+            <div class="scr-title">Tarjetas</div>
+          </div>
+
+          <div class="scroll-area">
+            <div class="tarjeta">
+              <div class="tarjeta-bg-circle"></div>
+              <div class="t-bank">Bancolombia</div>
+              <div class="t-num">•••• •••• •••• 4821</div>
+              <div class="t-footer">
+                <div class="t-holder">YAMID CUETO</div>
+                <div class="t-net">VISA</div>
+              </div>
+            </div>
+
+            <div class="px16">
+              <!-- Cupo -->
+              <div class="sh-row mb8">
+                <span class="sh-title">Cupo</span>
+                <span style="font-size:12px;color:var(--t2)">Corte: 20 nov</span>
+              </div>
+
+              <div class="cupo-card">
+                <div class="cupo-row">
+                  <span class="cupo-lbl">Cupo aprobado</span>
+                  <span class="cupo-val money">$5.000.000</span>
+                </div>
+                <div class="cupo-row">
+                  <span class="cupo-lbl">Cupo usado</span>
+                  <span class="cupo-val money cr">$2.800.000</span>
+                </div>
+                <div class="cupo-bar">
+                  <div class="cupo-fill" style="width:56%"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:4px">
+                  <span>56% utilizado</span>
+                </div>
+                <div style="height:10px"></div>
+                <div class="cupo-row">
+                  <span class="cupo-lbl">Disponible</span>
+                  <span class="cupo-val money cg">$2.200.000</span>
+                </div>
+              </div>
+
+              <!-- Compras diferidas -->
+              <div class="sh-row">
+                <span class="sh-title">Compras diferidas</span>
+                <span style="font-size:12px;color:var(--t2)">4 activas</span>
+              </div>
+
+              <div class="card" style="margin-bottom:20px">
+                <div class="dif-item">
+                  <div class="di-l">
+                    <div class="di-name">Apple iPhone 15</div>
+                    <div class="di-meta">12 cuotas · paga cuota 3 de 12</div>
+                  </div>
+                  <div class="di-r">
+                    <div class="di-cuota money">$120.000/mes</div>
+                    <div class="di-total money">$1.440.000 total</div>
+                  </div>
+                </div>
+                <div class="dif-item">
+                  <div class="di-l">
+                    <div class="di-name">Netflix anual</div>
+                    <div class="di-meta">3 cuotas · paga cuota 2 de 3</div>
+                  </div>
+                  <div class="di-r">
+                    <div class="di-cuota money">$48.333/mes</div>
+                    <div class="di-total money">$145.000 total</div>
+                  </div>
+                </div>
+                <div class="dif-item">
+                  <div class="di-l">
+                    <div class="di-name">Supermercado</div>
+                    <div class="di-meta">6 cuotas · paga cuota 1 de 6</div>
+                  </div>
+                  <div class="di-r">
+                    <div class="di-cuota money">$85.000/mes</div>
+                    <div class="di-total money">$510.000 total</div>
+                  </div>
+                </div>
+                <div class="dif-item">
+                  <div class="di-l">
+                    <div class="di-name">Electrodoméstico</div>
+                    <div class="di-meta">24 cuotas · paga cuota 4 de 24</div>
+                  </div>
+                  <div class="di-r">
+                    <div class="di-cuota money">$62.500/mes</div>
+                    <div class="di-total money">$1.500.000 total</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <nav class="bnav">
+            <div class="bn-item" data-goto="s-dash"><div class="bn-ico">⌂</div><div class="bn-lbl">Inicio</div></div>
+            <div class="bn-item" data-goto="s-creditos"><div class="bn-ico">📋</div><div class="bn-lbl">Créditos</div></div>
+            <div class="bn-item active" data-goto="s-tarjetas"><div class="bn-ico">💳</div><div class="bn-lbl">Tarjetas</div></div>
+            <div class="bn-item" data-goto="s-sim"><div class="bn-ico">⚡</div><div class="bn-lbl">Simular</div></div>
+          </nav>
+        </div>
+
+        <!-- ── SCREEN: SIMULADOR ── -->
+        <div class="screen" id="s-sim">
+          <div class="sbar">
+            <span>9:41</span>
+            <div class="sbar-r"><span>●●●</span><span>▲</span><span>⬛</span></div>
+          </div>
+
+          <div class="scr-header">
+            <div class="back-btn" data-goto="s-dash">‹</div>
+            <div class="scr-title">Simulador</div>
+          </div>
+
+          <div class="scroll-area">
+            <div class="px16" style="padding-top:4px">
+
+              <div class="sim-pick">
+                <div class="sp-lbl">Crédito</div>
+                <div class="sp-val">
+                  <span>Libre inversión</span>
+                  <span style="color:var(--t3);font-size:13px">▾</span>
+                </div>
+              </div>
+
+              <div style="margin-bottom:6px">
+                <div class="sim-lbl">Abono extraordinario</div>
+              </div>
+              <div class="sim-inp">
+                <span class="si-cur">$</span>
+                <span class="si-val">1.500.000</span>
+              </div>
+
+              <div class="sim-lbl" style="margin-bottom:6px">Objetivo del abono</div>
+              <div class="toggle-row">
+                <div class="tog active">Reducir plazo</div>
+                <div class="tog">Reducir cuota</div>
+              </div>
+
+              <!-- Result -->
+              <div class="sim-result">
+                <div class="sr-eyebrow">Resultado de la simulación</div>
+                <div class="sr-grid">
+                  <div class="sr-col before">
+                    <div class="sr-col-lbl before">Sin abono</div>
+                    <div class="sr-stat">
+                      <label>Cuota mensual</label>
+                      <value class="money">$890.000</value>
+                    </div>
+                    <div class="sr-stat">
+                      <label>Cuotas rest.</label>
+                      <value>24</value>
+                    </div>
+                    <div class="sr-stat">
+                      <label>Costo total</label>
+                      <value class="money">$21.360.000</value>
+                    </div>
+                  </div>
+                  <div class="sr-arrow">→</div>
+                  <div class="sr-col after">
+                    <div class="sr-col-lbl after">Con abono</div>
+                    <div class="sr-stat">
+                      <label>Cuota mensual</label>
+                      <value class="money">$890.000</value>
+                    </div>
+                    <div class="sr-stat">
+                      <label>Cuotas rest.</label>
+                      <value>20</value>
+                    </div>
+                    <div class="sr-stat">
+                      <label>Ahorras</label>
+                      <value class="money" style="color:var(--green)">$1.580.000</value>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd2);font-size:11px;color:var(--t2)">
+                  Reduce 4 cuotas. Próxima fecha de pago: 15 jul 2028 → 15 mar 2028.
+                </div>
+              </div>
+
+              <button class="btn-sim">Aplicar abono</button>
+              <div style="height:20px"></div>
+            </div>
+          </div>
+
+          <nav class="bnav">
+            <div class="bn-item" data-goto="s-dash"><div class="bn-ico">⌂</div><div class="bn-lbl">Inicio</div></div>
+            <div class="bn-item" data-goto="s-creditos"><div class="bn-ico">📋</div><div class="bn-lbl">Créditos</div></div>
+            <div class="bn-item" data-goto="s-tarjetas"><div class="bn-ico">💳</div><div class="bn-lbl">Tarjetas</div></div>
+            <div class="bn-item active" data-goto="s-sim"><div class="bn-ico">⚡</div><div class="bn-lbl">Simular</div></div>
+          </nav>
+        </div>
+
+      </div><!-- /device -->
+    </div><!-- /device-outer -->
+
+    <!-- Annotations panel (desktop) -->
+    <div class="annotations">
+      <div class="ann">
+        <div class="ann-num">01</div>
+        <div class="ann-title">Lenguaje claro</div>
+        <div class="ann-body">Sin "vault" ni "master password". El usuario ve su nombre, su período y sus cifras reales de inmediato.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-num">02</div>
+        <div class="ann-title">4 KPIs financieros</div>
+        <div class="ann-body">Liquidez / Deuda / Cuota exigible / Costo financiero: el estado real del mes en un vistazo.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-num">03</div>
+        <div class="ann-title">Navegación inferior</div>
+        <div class="ann-body">Inicio · Créditos · Tarjetas · Simular. Persistente, accesible con el pulgar en cualquier pantalla.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-num">04</div>
+        <div class="ann-title">Tabla + simulador</div>
+        <div class="ann-body">Tabla de amortización cuota por cuota. Simulador de abono extraordinario con comparación antes/después.</div>
+      </div>
+      <div class="ann">
+        <div class="ann-num">05</div>
+        <div class="ann-title">Barras de cupo</div>
+        <div class="ann-body">Cupo aprobado → usado → disponible visible en un solo bloque. Compras diferidas agrupadas por tarjeta.</div>
+      </div>
+    </div>
+  </div><!-- /proto-layout -->
+</div><!-- /page -->
+
+<script>
+(function () {
+  function goTo(id) {
+    // Hide all screens
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    // Show target
+    var target = document.getElementById(id);
+    if (target) { target.classList.add('active'); target.scrollTop = 0; }
+
+    // Update top tabs
+    document.querySelectorAll('#screenTabs .tab-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.target === id);
+    });
+  }
+
+  // Top tabs
+  document.querySelectorAll('#screenTabs .tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { goTo(this.dataset.target); });
+  });
+
+  // All [data-goto] elements (nav items, links, credit items, etc.)
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-goto]');
+    if (el) {
+      e.preventDefault();
+      goTo(el.dataset.goto);
+    }
+  });
+
+  // Toggle sim options
+  document.querySelectorAll('.tog').forEach(function(t) {
+    t.addEventListener('click', function() {
+      this.closest('.toggle-row').querySelectorAll('.tog').forEach(function(x){ x.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+
+  // Detail tabs
+  document.querySelectorAll('.tn').forEach(function(t) {
+    t.addEventListener('click', function() {
+      this.closest('.tab-nav').querySelectorAll('.tn').forEach(function(x){ x.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+})();
+</script>
+
+</body></html>
