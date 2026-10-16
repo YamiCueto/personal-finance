@@ -21,6 +21,9 @@ import {
   RecordTransferDTO,
 } from '../repositories/financial-repositories.contract';
 
+import { AuthService } from '../services/auth.service';
+import { LocalFinancialAdapter } from '../repositories/local-financial.adapter';
+
 export interface SelectedPeriod {
   year: number;
   month: number;
@@ -35,10 +38,16 @@ export class FinancialFacade {
   private readonly obligationsService = inject(PeriodObligationsService);
   private readonly incomesService = inject(IncomesService);
   private readonly operationsService = inject(FinancialOperationsService);
+  private readonly auth = inject(AuthService);
+  private readonly localAdapter = inject(LocalFinancialAdapter, { optional: true });
   public readonly config = inject(FINANCIAL_CONFIG);
 
   // --- SEÑALES DE ESTADO BASE ---
-  readonly selectedPeriod = signal<SelectedPeriod>({ year: 2026, month: 5 });
+  // Inicia dinámicamente con el mes y año actuales según la zona horaria del dispositivo
+  readonly selectedPeriod = signal<SelectedPeriod>({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+  });
   readonly accounts = signal<FinancialAccount[]>([]);
   readonly creditProducts = signal<CreditProduct[]>([]);
   readonly periodObligations = signal<PeriodObligation[]>([]);
@@ -118,6 +127,17 @@ export class FinancialFacade {
     const inc = FinancialCalculatorV2.toCents(this.totalIncome());
     const ob = FinancialCalculatorV2.toCents(this.totalMonthlyObligations());
     return FinancialCalculatorV2.fromCents(inc - ob);
+  });
+
+  /**
+   * Liquidez Proyectada del Usuario:
+   * Saldo líquido real actual en cuentas - Total de obligaciones pendientes del período.
+   * Representa los fondos que quedarán efectivamente en las cuentas tras cubrir todos los compromisos restantes.
+   */
+  readonly projectedLiquidity = computed<number>(() => {
+    const liquid = FinancialCalculatorV2.toCents(this.totalLiquidBalance());
+    const pending = FinancialCalculatorV2.toCents(this.totalPendingObligations());
+    return FinancialCalculatorV2.fromCents(liquid - pending);
   });
 
   /**
@@ -227,5 +247,16 @@ export class FinancialFacade {
     const res = await this.operationsService.recordTransfer(dto);
     await this.loadPeriodData();
     return res;
+  }
+
+  /**
+   * Reinicia el escenario demostrativo para el usuario activo y recarga los datos.
+   */
+  async resetLocalScenario(): Promise<void> {
+    const userId = this.auth.currentUser()?.id || 'default-user';
+    if (this.localAdapter) {
+      this.localAdapter.resetUserScenario(userId);
+    }
+    await this.loadPeriodData();
   }
 }

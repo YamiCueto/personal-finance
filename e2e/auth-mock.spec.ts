@@ -394,4 +394,48 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(page.locator('[data-testid="demo-badge"]')).toBeVisible();
     await expect(page.locator('.kpi-card.real-balance')).toBeVisible();
   });
+
+  test('end-to-end financial operations: record income, create obligation, record payment and verify metrics', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+
+    // 1. Verificar carga inicial de la bóveda
+    await expect(page.locator('[data-testid="demo-badge"]')).toBeVisible();
+    await expect(page.locator('.kpi-card.real-balance .kpi-value')).toBeVisible();
+
+    // 2. Registrar Ingreso
+    await page.getByRole('tab', { name: /ingresos/i }).click();
+    await page.getByRole('button', { name: /\+ ingreso/i }).click();
+    await expect(page.locator('.modal-card')).toBeVisible();
+
+    await page.locator('#inc-desc').fill('Cobro Proyecto Freelance');
+    await page.locator('#inc-amount').fill('1500000');
+    await page.getByRole('button', { name: /registrar ingreso/i }).click();
+    await expect(page.locator('.alert-banner.success')).toBeVisible();
+
+    // 3. Crear Obligación
+    await page.getByRole('tab', { name: /obligaciones/i }).click();
+    await page.getByRole('button', { name: /\+ obligación/i }).click();
+    await expect(page.locator('.modal-card')).toBeVisible();
+
+    await page.locator('#ob-name').fill('Seguro Exequial');
+    await page.locator('#ob-amount').fill('120000');
+    await page.getByRole('button', { name: /guardar obligación/i }).click();
+    await expect(page.locator('.alert-banner.success')).toBeVisible();
+
+    // 4. Registrar Pago
+    const obligationCard = page.locator('.obligation-card', { hasText: 'Seguro Exequial' });
+    await expect(obligationCard).toBeVisible();
+    await obligationCard.getByRole('button', { name: /registrar pago/i }).click();
+
+    await expect(page.locator('.modal-card')).toBeVisible();
+    await page.getByRole('button', { name: /confirmar pago/i }).click();
+    await expect(page.locator('.alert-banner.success')).toBeVisible();
+    await expect(obligationCard.locator('.paid-check')).toBeVisible();
+
+    // 5. Verificar Cascada
+    await page.getByRole('tab', { name: /cascada/i }).click();
+    await expect(page.locator('.waterfall-milestone.start')).toBeVisible();
+    await expect(page.locator('.waterfall-milestone.end')).toBeVisible();
+  });
 });

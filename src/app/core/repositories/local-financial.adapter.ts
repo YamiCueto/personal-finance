@@ -142,16 +142,14 @@ export class LocalFinancialAdapter
     };
     this.creditProductsMap.set(userId, [credit1]);
 
-    const y = 2026;
-    const m = 5;
-
-    const ob1: PeriodObligation = {
+    // 1. Semilla de compatibilidad fija para pruebas y regresión en 2026-05
+    const ob1_2026: PeriodObligation = {
       id: 'ob-cuota-vehiculo-mayo',
       userId,
       creditProductId: credit1.id,
       sourceType: 'CREDIT_INSTALLMENT',
-      periodYear: y,
-      periodMonth: m,
+      periodYear: 2026,
+      periodMonth: 5,
       name: 'Cuota Crédito Vehículo (Mayo)',
       amount: 980000.0,
       amountPaid: 0.0,
@@ -166,12 +164,12 @@ export class LocalFinancialAdapter
       createdAt: now,
       updatedAt: now,
     };
-    const ob2: PeriodObligation = {
+    const ob2_2026: PeriodObligation = {
       id: 'ob-servicios-internet',
       userId,
       sourceType: 'RECURRENT_EXPENSE',
-      periodYear: y,
-      periodMonth: m,
+      periodYear: 2026,
+      periodMonth: 5,
       name: 'Fibra Óptica Claro',
       amount: 145000.0,
       amountPaid: 0.0,
@@ -186,22 +184,154 @@ export class LocalFinancialAdapter
       createdAt: now,
       updatedAt: now,
     };
-    this.periodObligationsMap.set(userId, [ob1, ob2]);
-
-    const inc1: Income = {
+    const inc1_2026: Income = {
       id: 'inc-salario-mayo',
       userId,
       accountId: acc1.id,
-      periodYear: y,
-      periodMonth: m,
+      periodYear: 2026,
+      periodMonth: 5,
       sourceName: 'Salario Nómina Mayo',
       amount: 5800000.0,
       receivedDate: '2026-05-15',
       isReversed: false,
       createdAt: now,
     };
-    this.incomesMap.set(userId, [inc1]);
-    this.paymentsMap.set(userId, []);
+
+    const allObs: PeriodObligation[] = [ob1_2026, ob2_2026];
+    const allIncs: Income[] = [inc1_2026];
+    const allPays: ObligationPayment[] = [];
+
+    // 2. Si el mes actual del sistema difiere de 2026-05, sembrar el escenario dinámico Sprint 2 / Fase 2
+    const currentDate = new Date();
+    const currentY = currentDate.getFullYear();
+    const currentM = currentDate.getMonth() + 1;
+
+    if (currentY !== 2026 || currentM !== 5) {
+      const yStr = currentY.toString();
+      const mStr = currentM.toString().padStart(2, '0');
+
+      const incCurrent: Income = {
+        id: `inc-salario-${currentY}-${currentM}`,
+        userId,
+        accountId: acc1.id,
+        periodYear: currentY,
+        periodMonth: currentM,
+        sourceName: `Salario Nómina ${mStr}/${yStr}`,
+        amount: 5800000.0,
+        receivedDate: `${yStr}-${mStr}-15`,
+        isReversed: false,
+        createdAt: now,
+      };
+      allIncs.push(incCurrent);
+
+      // Obligación 1: Pago parcial
+      const obCurrent1: PeriodObligation = {
+        id: `ob-cuota-vehiculo-${currentY}-${currentM}`,
+        userId,
+        creditProductId: credit1.id,
+        sourceType: 'CREDIT_INSTALLMENT',
+        periodYear: currentY,
+        periodMonth: currentM,
+        name: `Cuota Crédito Vehículo (${mStr}/${yStr})`,
+        amount: 980000.0,
+        amountPaid: 350000.0,
+        amountPending: 630000.0,
+        status: 'PARTIAL',
+        orderIndex: 1,
+        capitalComponent: 520000.0,
+        interestCurrentComponent: 415000.0,
+        interestMoraComponent: 0.0,
+        insuranceComponent: 45000.0,
+        otherFeesComponent: 0.0,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const payCurrent1: ObligationPayment = {
+        id: `pay-cuota-parcial-${currentY}-${currentM}`,
+        userId,
+        obligationId: obCurrent1.id,
+        accountId: acc1.id,
+        amount: 350000.0,
+        paymentType: 'PARTIAL_PAYMENT',
+        paymentDate: `${yStr}-${mStr}-05`,
+        appliedToCapital: 200000.0,
+        appliedToInterest: 150000.0,
+        appliedToInsurance: 0.0,
+        appliedToFees: 0.0,
+        isReversed: false,
+        notes: 'Pago parcial abonado a cuota',
+        createdAt: now,
+      };
+
+      // Obligación 2: Pago completo
+      const obCurrent2: PeriodObligation = {
+        id: `ob-servicios-internet-${currentY}-${currentM}`,
+        userId,
+        sourceType: 'RECURRENT_EXPENSE',
+        periodYear: currentY,
+        periodMonth: currentM,
+        name: 'Fibra Óptica Claro',
+        amount: 145000.0,
+        amountPaid: 145000.0,
+        amountPending: 0.0,
+        status: 'PAID',
+        orderIndex: 2,
+        capitalComponent: 145000.0,
+        interestCurrentComponent: 0.0,
+        interestMoraComponent: 0.0,
+        insuranceComponent: 0.0,
+        otherFeesComponent: 0.0,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const payCurrent2: ObligationPayment = {
+        id: `pay-fibra-completo-${currentY}-${currentM}`,
+        userId,
+        obligationId: obCurrent2.id,
+        accountId: acc2.id,
+        amount: 145000.0,
+        paymentType: 'FULL_PAYMENT',
+        paymentDate: `${yStr}-${mStr}-08`,
+        appliedToCapital: 145000.0,
+        appliedToInterest: 0.0,
+        appliedToInsurance: 0.0,
+        appliedToFees: 0.0,
+        isReversed: false,
+        notes: 'Pago total del mes',
+        createdAt: now,
+      };
+
+      // Obligación 3: Pendiente
+      const obCurrent3: PeriodObligation = {
+        id: `ob-seguro-vida-${currentY}-${currentM}`,
+        userId,
+        sourceType: 'RECURRENT_EXPENSE',
+        periodYear: currentY,
+        periodMonth: currentM,
+        name: 'Seguro de Vida y Accidentes',
+        amount: 180000.0,
+        amountPaid: 0.0,
+        amountPending: 180000.0,
+        status: 'PENDING',
+        orderIndex: 3,
+        capitalComponent: 180000.0,
+        interestCurrentComponent: 0.0,
+        interestMoraComponent: 0.0,
+        insuranceComponent: 0.0,
+        otherFeesComponent: 0.0,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      allObs.push(obCurrent1, obCurrent2, obCurrent3);
+      allPays.push(payCurrent1, payCurrent2);
+    }
+
+    this.periodObligationsMap.set(userId, allObs);
+    this.incomesMap.set(userId, allIncs);
+    this.paymentsMap.set(userId, allPays);
     this.transfersMap.set(userId, []);
   }
 
@@ -214,6 +344,23 @@ export class LocalFinancialAdapter
     this.paymentsMap.clear();
     this.transfersMap.clear();
     this.idempotencyStore.clear();
+  }
+
+  public resetUserScenario(userId: string): void {
+    this.institutionsMap.delete(userId);
+    this.accountsMap.delete(userId);
+    this.creditProductsMap.delete(userId);
+    this.periodObligationsMap.delete(userId);
+    this.incomesMap.delete(userId);
+    this.paymentsMap.delete(userId);
+    this.transfersMap.delete(userId);
+    // Limpiar claves de idempotencia de este usuario
+    for (const key of this.idempotencyStore.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        this.idempotencyStore.delete(key);
+      }
+    }
+    this.seedDefaultUserData(userId);
   }
 
   private ensureUserInitialized(userId: string): void {
@@ -384,6 +531,13 @@ export class LocalFinancialAdapter
   async createPeriodObligation(userId: string, dto: CreateObligationDTO): Promise<PeriodObligation> {
     if (dto.amount <= 0) {
       throw new Error('El monto de la obligación debe ser mayor a 0');
+    }
+    if (dto.creditProductId) {
+      const credits = this.creditProductsMap.get(userId) || [];
+      const belongs = credits.some((c) => c.id === dto.creditProductId);
+      if (!belongs) {
+        throw new Error('El producto de crédito asociado no existe o no pertenece al usuario');
+      }
     }
     const list = this.periodObligationsMap.get(userId) || [];
     const ob: PeriodObligation = {
