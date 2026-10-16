@@ -9,11 +9,20 @@ import {
   Income,
   PeriodObligation,
 } from '../../core/models/financial-v2.model';
+import { CreditsManagerComponent } from '../credits/credits-manager.component';
+import { CreditCardsManagerComponent } from '../credit-cards/credit-cards-manager.component';
+import { FinancialSimulatorsComponent } from '../simulators/financial-simulators.component';
 
 @Component({
   selector: 'app-app-shell',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    CreditsManagerComponent,
+    CreditCardsManagerComponent,
+    FinancialSimulatorsComponent,
+  ],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
 })
@@ -35,7 +44,9 @@ export class AppShellComponent implements OnInit {
   readonly actionSuccess = signal<string | null>(null);
 
   // Pestaña activa
-  readonly activeTab = signal<'waterfall' | 'obligations' | 'incomes' | 'accounts'>('waterfall');
+  readonly activeTab = signal<
+    'waterfall' | 'obligations' | 'credits' | 'cards' | 'simulators' | 'incomes' | 'accounts'
+  >('waterfall');
 
   // Modales
   readonly showAccountModal = signal<boolean>(false);
@@ -49,6 +60,8 @@ export class AppShellComponent implements OnInit {
   readonly incomes = this.financialFacade.incomes;
   readonly obligations = this.financialFacade.periodObligations;
   readonly creditProducts = this.financialFacade.creditProducts;
+  readonly loans = this.financialFacade.loans;
+  readonly creditCards = this.financialFacade.creditCards;
   readonly waterfallItems = this.financialFacade.monthlyWaterfall;
 
   readonly totalLiquidBalance = this.financialFacade.totalLiquidBalance;
@@ -58,6 +71,11 @@ export class AppShellComponent implements OnInit {
   readonly totalPendingObligations = this.financialFacade.totalPendingObligations;
   readonly totalFreeProjected = this.financialFacade.totalFreeProjected;
   readonly projectedLiquidity = this.financialFacade.projectedLiquidity;
+  readonly totalPrincipalDebt = this.financialFacade.totalPrincipalDebt;
+  readonly totalAvailableCreditLimit = this.financialFacade.totalAvailableCreditLimit;
+  readonly totalProjectedInterest = this.financialFacade.totalProjectedInterest;
+  readonly upcomingDueDates = this.financialFacade.upcomingDueDates;
+  readonly netWorth = this.financialFacade.netWorth;
 
   readonly monthsList = [
     { value: 1, label: 'Enero' },
@@ -119,7 +137,9 @@ export class AppShellComponent implements OnInit {
     await this.financialFacade.setPeriod(this.selectedYear(), month);
   }
 
-  setActiveTab(tab: 'waterfall' | 'obligations' | 'incomes' | 'accounts'): void {
+  setActiveTab(
+    tab: 'waterfall' | 'obligations' | 'credits' | 'cards' | 'simulators' | 'incomes' | 'accounts'
+  ): void {
     this.activeTab.set(tab);
     this.clearFeedback();
   }

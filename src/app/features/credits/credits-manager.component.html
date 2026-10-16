@@ -1,0 +1,343 @@
+<div class="credits-manager-container" data-testid="credits-manager">
+  <!-- Cabecera de Sección -->
+  <div class="section-header">
+    <div class="header-titles">
+      <h2 class="title">Gestión de Créditos y Amortización</h2>
+      <p class="subtitle">Administración de productos crediticios, conversión de tasas y cronogramas deterministas</p>
+    </div>
+    <button
+      type="button"
+      class="btn-primary"
+      data-testid="btn-open-create-credit"
+      (click)="openCreateModal()"
+    >
+      <span class="icon">+</span>
+      <span>Nuevo Crédito</span>
+    </button>
+  </div>
+
+  <!-- Feedback Banner -->
+  @if (actionMessage(); as msg) {
+    <div
+      class="alert-banner"
+      [class.success]="msg.type === 'success'"
+      [class.error]="msg.type === 'error'"
+      role="status"
+      aria-live="polite"
+      data-testid="credit-action-alert"
+    >
+      <span class="alert-icon">{{ msg.type === 'success' ? '✓' : '⚠' }}</span>
+      <span class="alert-text">{{ msg.text }}</span>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Lista de Créditos Activos -->
+  @if (loans().length === 0) {
+    <div class="empty-state" data-testid="empty-credits">
+      <div class="empty-icon">💳</div>
+      <h3 class="empty-title">No hay créditos registrados</h3>
+      <p class="empty-desc">Registra un nuevo préstamo para proyectar su tabla de amortización e integrarlo a tus cuotas mensuales.</p>
+      <button type="button" class="btn-secondary" (click)="openCreateModal()">Crear primer crédito</button>
+    </div>
+  } @else {
+    <div class="credits-grid">
+      @for (credit of loans(); track credit.id) {
+        <div class="credit-card" [attr.data-testid]="'credit-card-' + credit.id">
+          <div class="credit-card-header">
+            <div class="credit-title-group">
+              <span class="credit-type-badge">{{ credit.type }}</span>
+              <h3 class="credit-name">{{ credit.name }}</h3>
+              <span class="credit-institution">{{ credit.institutionId || 'Entidad Financiera' }}</span>
+            </div>
+            <span class="credit-status-badge" [class.active]="credit.status === 'ACTIVE'">
+              {{ credit.status === 'ACTIVE' ? 'Activo' : credit.status }}
+            </span>
+          </div>
+
+          <div class="credit-card-metrics">
+            <div class="metric-item highlight">
+              <span class="metric-label">Capital Pendiente</span>
+              <span class="metric-val text-cyan" data-testid="credit-principal-balance">
+                {{ formatMoney(credit.currentPrincipalBalance) }}
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Capital Original</span>
+              <span class="metric-val">{{ formatMoney(credit.originalPrincipal) }}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Tasa EA / NMV</span>
+              <span class="metric-val">
+                {{ credit.effectiveAnnualRate }}% EA
+                <span class="metric-sub">({{ credit.nominalRateMonthly }}% NMV)</span>
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Plazo Restante</span>
+              <span class="metric-val">
+                {{ credit.remainingInstallments || credit.totalInstallments }} / {{ credit.totalInstallments }} cuotas
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Sistema Amortización</span>
+              <span class="metric-val font-mono">
+                {{ credit.amortizationMethod === 'GERMAN' ? 'Alemán (Capital constante)' : 'Francés (Cuota fija)' }}
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Seguro Mensual</span>
+              <span class="metric-val">{{ formatMoney(credit.associatedInsurancesMonthly || 0) }}</span>
+            </div>
+          </div>
+
+          <div class="credit-card-actions">
+            <button
+              type="button"
+              class="btn-action view-schedule"
+              data-testid="btn-view-schedule"
+              (click)="openScheduleModal(credit)"
+            >
+              📊 Ver Tabla de Amortización
+            </button>
+            <button
+              type="button"
+              class="btn-action generate-installment"
+              data-testid="btn-generate-installment"
+              (click)="generateMonthlyInstallment(credit)"
+            >
+              📅 Generar Cuota del Mes
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal: Crear Nuevo Crédito -->
+  @if (showCreateModal()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-credit-title">
+        <div class="modal-header">
+          <h3 id="modal-credit-title" class="modal-title">Registrar Nuevo Crédito</h3>
+          <button type="button" class="modal-close" (click)="closeCreateModal()">✕</button>
+        </div>
+
+        <form [formGroup]="creditForm" (ngSubmit)="submitCreateCredit()" class="modal-form">
+          <div class="form-group">
+            <label for="credit-name" class="form-label">Nombre del Producto *</label>
+            <input
+              id="credit-name"
+              type="text"
+              class="form-input"
+              formControlName="name"
+              placeholder="Ej. Crédito Vehículo Bancolombia"
+            />
+            @if (creditForm.get('name')?.touched && creditForm.get('name')?.invalid) {
+              <span class="form-error">El nombre es requerido (mínimo 3 caracteres).</span>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="credit-type" class="form-label">Tipo de Crédito *</label>
+              <select id="credit-type" class="form-select" formControlName="type">
+                <option value="CONSUMER_LOAN">Consumo / Libre Inversión</option>
+                <option value="VEHICLE_LOAN">Crédito de Vehículo</option>
+                <option value="MORTGAGE">Hipotecario / Vivienda</option>
+                <option value="PAYROLL_LOAN">Libranza</option>
+                <option value="COMMERCIAL_LOAN">Comercial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="credit-institution" class="form-label">Institución *</label>
+              <select id="credit-institution" class="form-select" formControlName="institutionId">
+                <option value="inst-banco-occidente">Banco de Occidente</option>
+                <option value="inst-nequi">Nequi Colombia</option>
+                <option value="inst-bancolombia">Bancolombia</option>
+                <option value="inst-davivienda">Davivienda</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="credit-principal" class="form-label">Capital Inicial ($ COP) *</label>
+              <input
+                id="credit-principal"
+                type="number"
+                class="form-input"
+                formControlName="originalPrincipal"
+                placeholder="40000000"
+                min="1000"
+              />
+              @if (creditForm.get('originalPrincipal')?.touched && creditForm.get('originalPrincipal')?.invalid) {
+                <span class="form-error">Ingrese un capital válido mayor a 0.</span>
+              }
+            </div>
+            <div class="form-group">
+              <label for="credit-installments" class="form-label">Plazo Total (Cuotas) *</label>
+              <input
+                id="credit-installments"
+                type="number"
+                class="form-input"
+                formControlName="totalInstallments"
+                placeholder="60"
+                min="1"
+                max="360"
+              />
+            </div>
+          </div>
+
+          <div class="form-row rate-row">
+            <div class="form-group">
+              <label for="credit-rate-type" class="form-label">Tipo de Tasa *</label>
+              <select id="credit-rate-type" class="form-select" formControlName="rateType">
+                <option value="EA">Efectiva Anual (% EA)</option>
+                <option value="NMV">Nominal Mes Vencido (% NMV)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="credit-rate-val" class="form-label">Tasa de Interés (%) *</label>
+              <input
+                id="credit-rate-val"
+                type="number"
+                step="0.01"
+                class="form-input"
+                formControlName="rateValue"
+                placeholder="18.86"
+                min="0"
+                max="100"
+              />
+              <span class="form-hint">Permite tasa 0% para préstamos especiales o convenios</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="credit-amort-method" class="form-label">Sistema de Amortización *</label>
+              <select id="credit-amort-method" class="form-select" formControlName="amortizationMethod">
+                <option value="FRENCH">Francés (Cuota mensual constante)</option>
+                <option value="GERMAN">Alemán (Abono a capital constante)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="credit-insurance" class="form-label">Seguro Mensual ($ COP)</label>
+              <input
+                id="credit-insurance"
+                type="number"
+                class="form-input"
+                formControlName="associatedInsurancesMonthly"
+                placeholder="45000"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="credit-due-day" class="form-label">Día Límite de Pago del Mes (1-31) *</label>
+            <input
+              id="credit-due-day"
+              type="number"
+              class="form-input"
+              formControlName="paymentDueDay"
+              placeholder="15"
+              min="1"
+              max="31"
+            />
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeCreateModal()">Cancelar</button>
+            <button
+              type="submit"
+              class="btn-primary"
+              data-testid="btn-submit-credit"
+              [disabled]="isSubmitting() || creditForm.invalid"
+            >
+              {{ isSubmitting() ? 'Registrando...' : 'Guardar Crédito' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Tabla de Amortización Completa -->
+  @if (showScheduleModal() && selectedCreditForSchedule(); as credit) {
+    <div class="modal-backdrop" (click)="closeScheduleModal()">
+      <div class="modal-card modal-large" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-sched-title">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3 id="modal-sched-title" class="modal-title">Tabla de Amortización: {{ credit.name }}</h3>
+            <p class="modal-subtitle">
+              Saldo: {{ formatMoney(credit.currentPrincipalBalance) }} | Tasa: {{ credit.effectiveAnnualRate }}% EA ({{ credit.nominalRateMonthly }}% NMV)
+            </p>
+          </div>
+          <button type="button" class="modal-close" (click)="closeScheduleModal()">✕</button>
+        </div>
+
+        <!-- Selector de Sistema Francés / Alemán -->
+        <div class="schedule-system-toggle">
+          <button
+            type="button"
+            class="toggle-btn"
+            [class.active]="scheduleMethodView() === 'FRENCH'"
+            (click)="setScheduleMethod('FRENCH')"
+            data-testid="toggle-french"
+          >
+            🏛️ Sistema Francés (Cuota Fija)
+          </button>
+          <button
+            type="button"
+            class="toggle-btn"
+            [class.active]="scheduleMethodView() === 'GERMAN'"
+            (click)="setScheduleMethod('GERMAN')"
+            data-testid="toggle-german"
+          >
+            🇩🇪 Sistema Alemán (Capital Constante)
+          </button>
+        </div>
+
+        <div class="schedule-notice">
+          <span class="notice-badge">Exactitud Contable</span>
+          <span>Ajuste determinista de residuo en centavos: el saldo del capital final es exactamente $0.00 COP.</span>
+        </div>
+
+        <!-- Tabla con scroll horizontal contenido -->
+        <div class="table-container" data-testid="amortization-table-container">
+          <table class="amortization-table" data-testid="amortization-table">
+            <thead>
+              <tr>
+                <th class="col-num">N°</th>
+                <th class="col-money">Cuota Total</th>
+                <th class="col-money">Abono Capital</th>
+                <th class="col-money">Interés</th>
+                <th class="col-money">Seguro</th>
+                <th class="col-money">Saldo Pendiente</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of currentSchedule(); track row.installmentNumber) {
+                <tr [class.final-row]="row.installmentNumber === currentSchedule().length">
+                  <td class="col-num">{{ row.installmentNumber }}</td>
+                  <td class="col-money font-semibold">{{ formatMoney(row.totalPayment) }}</td>
+                  <td class="col-money text-cyan">{{ formatMoney(row.principalPayment) }}</td>
+                  <td class="col-money text-amber">{{ formatMoney(row.interestPayment) }}</td>
+                  <td class="col-money">{{ formatMoney(row.insurancePayment) }}</td>
+                  <td class="col-money font-mono" [class.text-success]="row.remainingPrincipal === 0">
+                    {{ formatMoney(row.remainingPrincipal) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-primary" (click)="closeScheduleModal()">Cerrar Cronograma</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

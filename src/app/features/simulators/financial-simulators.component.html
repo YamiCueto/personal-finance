@@ -1,0 +1,343 @@
+<div class="simulators-container" data-testid="financial-simulators">
+  <!-- Cabecera de Sección -->
+  <div class="section-header">
+    <div class="header-titles">
+      <h2 class="title">Simuladores Financieros Avanzados</h2>
+      <p class="subtitle">Proyección matemática de prepagos, reducción de costos y análisis comparativo de rediferidos</p>
+    </div>
+  </div>
+
+  <!-- Navegación de Simuladores -->
+  <div class="simulators-tab-nav" role="tablist">
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn"
+      [class.active]="activeTab() === 'prepayment'"
+      [attr.aria-selected]="activeTab() === 'prepayment'"
+      (click)="setTab('prepayment')"
+      data-testid="tab-prepayment"
+    >
+      ⚡ Abonos Extraordinarios a Capital
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="tab-btn"
+      [class.active]="activeTab() === 'redeferred'"
+      [attr.aria-selected]="activeTab() === 'redeferred'"
+      (click)="setTab('redeferred')"
+      data-testid="tab-redeferred"
+    >
+      🔄 Simulación de Rediferidos
+    </button>
+  </div>
+
+  <!-- AVISO LEGAL OBLIGATORIO -->
+  <div class="disclaimer-banner" role="note">
+    <span class="disclaimer-icon">ℹ️</span>
+    <div class="disclaimer-text">
+      <strong>Simulación Informativa No Vinculante:</strong>
+      Los cálculos presentados constituyen estimaciones matemáticas deterministas proyectadas. No modifican los saldos reales de sus cuentas ni ejecutan pagos automáticos ante sus entidades financieras.
+    </div>
+  </div>
+
+  <!-- TAB 1: ABONOS EXTRAORDINARIOS -->
+  @if (activeTab() === 'prepayment') {
+    <div class="tab-content" data-testid="prepayment-simulator-view">
+      <div class="simulator-layout">
+        <!-- Formulario de Parámetros de Simulación -->
+        <div class="simulator-card form-card">
+          <h3 class="card-title">Parámetros del Abono a Capital</h3>
+
+          <form [formGroup]="prepaymentForm" (ngSubmit)="runPrepaymentSimulation()" class="sim-form">
+            <div class="form-group">
+              <label for="prep-credit" class="form-label">Seleccione el Crédito *</label>
+              <select id="prep-credit" class="form-select" formControlName="creditId" data-testid="select-prepayment-credit">
+                @for (c of loans(); track c.id) {
+                  <option [value]="c.id">
+                    {{ c.name }} (Saldo: {{ formatMoney(c.currentPrincipalBalance) }})
+                  </option>
+                }
+              </select>
+            </div>
+
+            @if (selectedPrepaymentCredit(); as credit) {
+              <div class="credit-context-chip">
+                <span>Saldo actual: <strong class="text-cyan">{{ formatMoney(credit.currentPrincipalBalance) }}</strong></span>
+                <span>Tasa: {{ credit.effectiveAnnualRate }}% EA</span>
+                <span>Plazo restante: {{ credit.remainingInstallments || credit.totalInstallments }} cuotas</span>
+              </div>
+            }
+
+            <div class="form-group">
+              <label for="prep-amount" class="form-label">Importe del Abono Extraordinario ($ COP) *</label>
+              <input
+                id="prep-amount"
+                type="number"
+                class="form-input"
+                formControlName="prepaymentAmount"
+                placeholder="5000000"
+                min="1000"
+                data-testid="input-prepayment-amount"
+              />
+              @if (prepaymentForm.get('prepaymentAmount')?.touched && prepaymentForm.get('prepaymentAmount')?.invalid) {
+                <span class="form-error">Ingrese un valor de abono mayor a 0.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Estrategia de Aplicación del Abono *</label>
+              <div class="strategy-selector">
+                <label class="strategy-option" [class.selected]="prepaymentForm.get('strategy')?.value === 'REDUCE_TERM'">
+                  <input type="radio" formControlName="strategy" value="REDUCE_TERM" data-testid="radio-reduce-term" />
+                  <div class="strategy-info">
+                    <span class="strategy-title">Reducción de Plazo</span>
+                    <span class="strategy-desc">Mantiene el valor de la cuota mensual y reduce el número de meses restantes para salir más rápido de la deuda.</span>
+                  </div>
+                </label>
+
+                <label class="strategy-option" [class.selected]="prepaymentForm.get('strategy')?.value === 'REDUCE_INSTALLMENT'">
+                  <input type="radio" formControlName="strategy" value="REDUCE_INSTALLMENT" data-testid="radio-reduce-installment" />
+                  <div class="strategy-info">
+                    <span class="strategy-title">Reducción de Cuota</span>
+                    <span class="strategy-desc">Mantiene el número de meses pactados y disminuye el valor exigible de cada cuota mensual liberando flujo de caja.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            @if (prepaymentError(); as err) {
+              <div class="form-error-banner">{{ err }}</div>
+            }
+
+            <button type="submit" class="btn-primary" data-testid="btn-run-prepayment" [disabled]="prepaymentForm.invalid">
+              Calcular Ahorro y Nuevo Escenario
+            </button>
+          </form>
+        </div>
+
+        <!-- Resultados de la Simulación -->
+        <div class="simulator-card results-card" data-testid="prepayment-results">
+          <h3 class="card-title">Resultado de la Simulación</h3>
+
+          @if (prepaymentResult(); as res) {
+            <div class="kpi-savings-hero">
+              <span class="savings-label">Ahorro Estimado de Intereses</span>
+              <span class="savings-value text-cyan" data-testid="prepayment-interest-savings">
+                {{ formatMoney(res.estimatedInterestSavings) }}
+              </span>
+              <span class="savings-note">
+                Estrategia: {{ res.strategy === 'REDUCE_TERM' ? 'Reducción de Plazo' : 'Reducción de Cuota' }}
+              </span>
+            </div>
+
+            <div class="comparison-grid">
+              <div class="comp-col before">
+                <h4 class="comp-header">Escenario Actual</h4>
+                <div class="comp-row">
+                  <span class="comp-label">Saldo Capital:</span>
+                  <span class="comp-val">{{ formatMoney(res.previousPrincipal) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Plazo Restante:</span>
+                  <span class="comp-val">{{ res.originalRemainingInstallments }} meses</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Cuota Mensual:</span>
+                  <span class="comp-val font-semibold">{{ formatMoney(res.originalInstallment) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Intereses Totales:</span>
+                  <span class="comp-val text-amber">{{ formatMoney(res.originalTotalInterest) }}</span>
+                </div>
+              </div>
+
+              <div class="comp-col after">
+                <h4 class="comp-header text-cyan">Escenario Simulado</h4>
+                <div class="comp-row">
+                  <span class="comp-label">Nuevo Saldo:</span>
+                  <span class="comp-val text-cyan font-semibold">{{ formatMoney(res.simulatedPrincipal) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nuevo Plazo:</span>
+                  <span class="comp-val" [class.text-cyan]="res.strategy === 'REDUCE_TERM'">
+                    {{ res.newRemainingInstallments }} meses
+                  </span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nueva Cuota:</span>
+                  <span class="comp-val" [class.text-cyan]="res.strategy === 'REDUCE_INSTALLMENT'">
+                    {{ formatMoney(res.newInstallment) }}
+                  </span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nuevos Intereses:</span>
+                  <span class="comp-val">{{ formatMoney(res.newTotalInterest) }}</span>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="empty-simulation">
+              <span class="empty-sim-icon">📊</span>
+              <p>Configure el monto y la estrategia para simular el impacto financiero del abono a capital.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: REDIFERIDOS Y REESTRUCTURACIÓN -->
+  @if (activeTab() === 'redeferred') {
+    <div class="tab-content" data-testid="redeferred-simulator-view">
+      <div class="simulator-layout">
+        <!-- Formulario de Rediferido -->
+        <div class="simulator-card form-card">
+          <h3 class="card-title">Parámetros del Rediferido Propuesto</h3>
+
+          <form [formGroup]="redeferredForm" (ngSubmit)="runRedeferredSimulation()" class="sim-form">
+            <div class="form-group">
+              <label for="redif-credit" class="form-label">Seleccione el Producto a Rediferir *</label>
+              <select id="redif-credit" class="form-select" formControlName="creditId" data-testid="select-redeferred-credit">
+                @for (c of creditProducts(); track c.id) {
+                  <option [value]="c.id">
+                    {{ c.name }} (Saldo: {{ formatMoney(c.currentPrincipalBalance) }})
+                  </option>
+                }
+              </select>
+            </div>
+
+            @if (selectedRedeferredCredit(); as credit) {
+              <div class="credit-context-chip">
+                <span>Saldo actual: <strong class="text-cyan">{{ formatMoney(credit.currentPrincipalBalance) }}</strong></span>
+                <span>Tasa actual: {{ credit.effectiveAnnualRate }}% EA</span>
+                <span>Plazo actual: {{ credit.remainingInstallments || credit.totalInstallments }} meses</span>
+              </div>
+            }
+
+            <div class="form-group">
+              <label for="redif-installments" class="form-label">Nuevo Plazo Propuesto (Meses / Cuotas) *</label>
+              <input
+                id="redif-installments"
+                type="number"
+                class="form-input"
+                formControlName="proposedInstallments"
+                placeholder="24"
+                min="1"
+                max="120"
+                data-testid="input-proposed-installments"
+              />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="redif-rate-type" class="form-label">Tipo de Tasa Propuesta *</label>
+                <select id="redif-rate-type" class="form-select" formControlName="rateType">
+                  <option value="EA">Efectiva Anual (% EA)</option>
+                  <option value="NMV">Nominal Mes Vencido (% NMV)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="redif-rate-val" class="form-label">Tasa Propuesta (%) *</label>
+                <input
+                  id="redif-rate-val"
+                  type="number"
+                  step="0.01"
+                  class="form-input"
+                  formControlName="proposedRateValue"
+                  placeholder="24.5"
+                  min="0"
+                  max="100"
+                  data-testid="input-proposed-rate"
+                />
+              </div>
+            </div>
+
+            @if (redeferredError(); as err) {
+              <div class="form-error-banner">{{ err }}</div>
+            }
+
+            <button type="submit" class="btn-primary" data-testid="btn-run-redeferred" [disabled]="redeferredForm.invalid">
+              Comparar Escenario Actual vs Propuesto
+            </button>
+          </form>
+        </div>
+
+        <!-- Resultados de Rediferido -->
+        <div class="simulator-card results-card" data-testid="redeferred-results">
+          <h3 class="card-title">Análisis Comparativo de Costo Total</h3>
+
+          @if (redeferredResult(); as res) {
+            <div class="kpi-savings-hero" [class.negative]="res.totalCostDifference > 0">
+              <span class="savings-label">
+                {{ res.totalCostDifference > 0 ? 'Sobrecosto Financiero Estimado' : 'Ahorro Financiero Estimado' }}
+              </span>
+              <span class="savings-value" [class.text-cyan]="res.totalCostDifference <= 0" [class.text-amber]="res.totalCostDifference > 0" data-testid="redeferred-cost-diff">
+                {{ formatMoney(res.totalCostDifference) }}
+              </span>
+              <span class="savings-note">
+                Diferencia en intereses: {{ formatMoney(res.interestDifference) }}
+              </span>
+            </div>
+
+            <div class="comparison-grid">
+              <div class="comp-col before">
+                <h4 class="comp-header">Condiciones Actuales</h4>
+                <div class="comp-row">
+                  <span class="comp-label">Plazo:</span>
+                  <span class="comp-val">{{ res.currentRemainingInstallments }} meses</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Tasa EA:</span>
+                  <span class="comp-val">{{ res.currentEa }}% EA</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Cuota Estimada:</span>
+                  <span class="comp-val font-semibold">{{ formatMoney(res.currentInstallment) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Intereses Proyectados:</span>
+                  <span class="comp-val text-amber">{{ formatMoney(res.currentTotalInterest) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Costo Total:</span>
+                  <span class="comp-val font-semibold">{{ formatMoney(res.currentTotalCost) }}</span>
+                </div>
+              </div>
+
+              <div class="comp-col after">
+                <h4 class="comp-header text-cyan">Condiciones Propuestas</h4>
+                <div class="comp-row">
+                  <span class="comp-label">Nuevo Plazo:</span>
+                  <span class="comp-val text-cyan font-semibold">{{ res.proposedInstallments }} meses</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nueva Tasa EA:</span>
+                  <span class="comp-val">{{ res.proposedEa }}% EA</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nueva Cuota:</span>
+                  <span class="comp-val font-semibold">{{ formatMoney(res.proposedInstallment) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nuevos Intereses:</span>
+                  <span class="comp-val">{{ formatMoney(res.proposedTotalInterest) }}</span>
+                </div>
+                <div class="comp-row">
+                  <span class="comp-label">Nuevo Costo Total:</span>
+                  <span class="comp-val font-semibold">{{ formatMoney(res.proposedTotalCost) }}</span>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="empty-simulation">
+              <span class="empty-sim-icon">🔄</span>
+              <p>Ingrese el nuevo plazo y tasa para proyectar cómo cambiará el costo total y el valor de su cuota mensual.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

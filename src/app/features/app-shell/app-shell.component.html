@@ -105,14 +105,23 @@
       <span class="kpi-sub">Saldo en cuentas - Obligaciones pendientes</span>
     </div>
 
-    <!-- Metric Ribbon: Ingresos vs Obligaciones vs Pagado vs Pendiente -->
+    <!-- Card: Deuda Total de Capital -->
+    <div class="kpi-card principal-debt">
+      <span class="kpi-label">Deuda Total de Capital</span>
+      <strong class="kpi-value tabular-nums text-amber" data-testid="dashboard-total-debt">
+        {{ totalPrincipalDebt() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+      </strong>
+      <span class="kpi-sub">{{ loans().length }} créditos • {{ creditCards().length }} tarjetas activas</span>
+    </div>
+
+    <!-- Metric Ribbon: Ingresos vs Obligaciones vs Pagado vs Pendiente vs Cupo -->
     <div class="metric-ribbon">
       <div class="ribbon-item">
         <span class="ribbon-label">Ingresos</span>
         <span class="ribbon-val tabular-nums">{{ totalIncome() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
       </div>
       <div class="ribbon-item">
-        <span class="ribbon-label">Obligaciones</span>
+        <span class="ribbon-label">Cuotas Exigibles</span>
         <span class="ribbon-val tabular-nums">{{ totalMonthlyObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
       </div>
       <div class="ribbon-item">
@@ -122,6 +131,18 @@
       <div class="ribbon-item">
         <span class="ribbon-label">Por Pagar</span>
         <span class="ribbon-val tabular-nums pending">{{ totalPendingObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Cupo Disponible</span>
+        <span class="ribbon-val tabular-nums text-cyan" data-testid="dashboard-available-credit">
+          {{ totalAvailableCreditLimit() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}
+        </span>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Intereses Proyectados</span>
+        <span class="ribbon-val tabular-nums text-amber" data-testid="dashboard-projected-interest">
+          {{ totalProjectedInterest() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}
+        </span>
       </div>
     </div>
   </section>
@@ -145,6 +166,36 @@
       role="tab"
     >
       Obligaciones ({{ obligations().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'credits'"
+      (click)="setActiveTab('credits')"
+      role="tab"
+      data-testid="tab-credits"
+    >
+      Créditos ({{ loans().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'cards'"
+      (click)="setActiveTab('cards')"
+      role="tab"
+      data-testid="tab-cards"
+    >
+      Tarjetas ({{ creditCards().length }})
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'simulators'"
+      (click)="setActiveTab('simulators')"
+      role="tab"
+      data-testid="tab-simulators"
+    >
+      Simuladores
     </button>
     <button
       type="button"
@@ -329,6 +380,27 @@
           </div>
         }
       </div>
+    </section>
+  }
+
+  <!-- Tab 5: Créditos y Amortización -->
+  @if (activeTab() === 'credits') {
+    <section class="tab-panel" aria-label="Gestión de Créditos">
+      <app-credits-manager />
+    </section>
+  }
+
+  <!-- Tab 6: Tarjetas de Crédito y Compras Diferidas -->
+  @if (activeTab() === 'cards') {
+    <section class="tab-panel" aria-label="Tarjetas de Crédito">
+      <app-credit-cards-manager />
+    </section>
+  }
+
+  <!-- Tab 7: Simuladores Financieros -->
+  @if (activeTab() === 'simulators') {
+    <section class="tab-panel" aria-label="Simuladores Financieros">
+      <app-financial-simulators />
     </section>
   }
 
