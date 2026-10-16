@@ -6,6 +6,12 @@
   color: var(--t1);
   position: relative;
   overflow-x: hidden;
+
+  @media (min-width: 768px) {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
 }
 
 .app-sidebar {
@@ -16,9 +22,8 @@
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
   height: 100dvh;
+  position: relative;
   z-index: 100;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -71,9 +76,10 @@
   align-items: center;
   justify-content: space-between;
 
-  .brand-wordmark {
+  .brand-wordmark,
+  .topbar-brand-title {
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--t1);
@@ -151,23 +157,18 @@
     width: 100%;
 
     app-icon {
-      color: var(--t3);
-      transition: color 0.15s ease;
+      color: inherit;
     }
 
     &:hover {
       background-color: var(--s2);
       color: var(--t1);
-
-      app-icon { color: var(--t1); }
     }
 
     &.active {
       background-color: var(--amber-bg);
       color: var(--amber);
       font-weight: 700;
-
-      app-icon { color: var(--amber); }
     }
 
     .nav-text {
@@ -233,42 +234,32 @@
   display: flex;
   gap: 0.5rem;
 
-  .btn-sidebar-reset {
-    flex: 1;
+  .btn-sidebar-reset,
+  .btn-sidebar-signout {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.65rem;
     background-color: var(--s2);
     border: 1px solid var(--bd);
     border-radius: 6px;
     color: var(--t2);
-    font-size: 0.75rem;
     cursor: pointer;
+  }
 
-    &:hover {
-      color: var(--amber);
-      border-color: var(--amber-dim);
-    }
+  .btn-sidebar-reset {
+    flex: 1;
+    gap: 0.35rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.75rem;
+
+    &:hover { color: var(--amber); border-color: var(--amber-dim); }
   }
 
   .btn-sidebar-signout {
     width: 32px;
     height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--s2);
-    border: 1px solid var(--bd);
-    border-radius: 6px;
-    color: var(--t2);
-    cursor: pointer;
 
-    &:hover {
-      color: var(--red);
-      border-color: rgba(239, 68, 68, 0.3);
-    }
+    &:hover { color: var(--red); border-color: rgba(239, 68, 68, 0.3); }
   }
 }
 
@@ -281,6 +272,10 @@
   padding-bottom: calc(72px + env(safe-area-inset-bottom, 20px));
 
   @media (min-width: 768px) {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding-bottom: 2rem;
   }
 }
@@ -306,19 +301,8 @@
     gap: 0.65rem;
 
     .topbar-brand-title {
-      font-family: var(--font-display);
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: var(--t1);
-
       @media (min-width: 768px) {
         display: none;
-      }
-
-      em {
-        color: var(--amber);
-        font-style: normal;
       }
     }
 
@@ -342,19 +326,24 @@
     gap: 0.5rem;
     margin-left: auto;
 
-    .btn-quick-action {
+    .btn-quick-action,
+    .btn-topbar-signout {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.45rem 0.75rem;
-      min-height: 36px;
+      justify-content: center;
+      height: 36px;
       background-color: var(--s2);
       border: 1px solid var(--bd);
       border-radius: var(--rsm);
+      cursor: pointer;
+    }
+
+    .btn-quick-action {
+      gap: 0.35rem;
+      padding: 0.45rem 0.75rem;
       color: var(--t1);
       font-size: 0.8rem;
       font-weight: 600;
-      cursor: pointer;
 
       &:hover {
         background-color: var(--s3);
@@ -363,16 +352,8 @@
     }
 
     .btn-topbar-signout {
-      display: flex;
-      align-items: center;
-      justify-content: center;
       width: 36px;
-      height: 36px;
-      background-color: var(--s2);
-      border: 1px solid var(--bd);
-      border-radius: var(--rsm);
       color: var(--t2);
-      cursor: pointer;
 
       &:hover {
         color: var(--red);
@@ -382,33 +363,33 @@
   }
 }
 
-.alert-wrapper {
-  margin: 1rem 1rem 0;
-  @media (min-width: 768px) {
-    margin: 1rem 1.75rem 0;
-  }
-}
-
 // Selector de Período Mensual
 .month-selector {
+  flex-shrink: 0;
   padding: 0.75rem 1rem;
   overflow-x: auto;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 
   @media (min-width: 768px) {
-    padding: 1rem 1.75rem 0.5rem;
+    padding: 0.85rem 1.75rem;
+    min-height: max-content;
   }
 
   .month-carousel-track {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+    min-height: 38px;
   }
 
   .month-pill {
     flex: 0 0 auto;
     padding: 0.45rem 1rem;
     min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background-color: var(--s1);
     border: 1px solid var(--bd);
     border-radius: 9999px;
@@ -416,7 +397,8 @@
     font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    transition: all 0.15s ease;
+    white-space: nowrap;
 
     &:hover {
       color: var(--t1);
@@ -434,6 +416,7 @@
 
 // ── 3. SECCIÓN DE KPIS ───────────────────────────────────────────────
 .kpi-section {
+  flex-shrink: 0;
   padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
@@ -446,15 +429,12 @@
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.85rem;
-
-  @media (min-width: 480px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
 
   @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
   }
 }
 
@@ -462,31 +442,50 @@
   background-color: var(--s1);
   border: 1px solid var(--bd);
   border-radius: var(--r);
-  padding: 1.15rem 1.25rem;
+  padding: 0.85rem 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
   transition: border-color 0.2s ease;
+
+  @media (min-width: 768px) {
+    padding: 1.15rem 1.25rem;
+  }
 
   &:hover {
     border-color: var(--amber-dim);
   }
 
   .kpi-label {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--t2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .kpi-value {
     font-family: var(--font-mono);
-    font-size: 1.45rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: var(--t1);
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (min-width: 440px) {
+      font-size: 1.15rem;
+    }
+
+    @media (min-width: 768px) {
+      font-size: 1.45rem;
+    }
 
     &.negative {
       color: var(--red) !important;
@@ -494,14 +493,26 @@
   }
 
   .kpi-sub {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--t3);
+
+    @media (max-width: 767px) {
+      display: none;
+    }
   }
 
-  &.real-balance { border-left: 3px solid var(--green); }
-  &.free-capital { border-left: 3px solid var(--amber); }
-  &.projected-liquidity { border-left: 3px solid var(--cyan); }
-  &.principal-debt { border-left: 3px solid var(--red); }
+  border-left-width: 3px;
+
+  &.real-balance { border-left-color: var(--green); }
+  &.free-capital { border-left-color: var(--amber); }
+  &.projected-liquidity { border-left-color: var(--cyan); }
+  &.principal-debt { border-left-color: var(--red); }
+}
+
+@media (max-width: 767px) {
+  .mobile-hidden {
+    display: none !important;
+  }
 }
 
 .metric-ribbon {
@@ -540,6 +551,7 @@
 
 // Barra de pestañas horizontal secundaria
 .module-tabs {
+  flex-shrink: 0;
   display: flex;
   gap: 0.5rem;
   padding: 0 1rem 0.5rem;
@@ -606,18 +618,11 @@
     cursor: pointer;
     transition: color 0.15s ease;
 
-    app-icon {
-      color: var(--t3);
-      transition: color 0.15s ease;
-    }
+    app-icon { color: inherit; }
 
     &.active {
       color: var(--amber);
       font-weight: 700;
-
-      app-icon {
-        color: var(--amber);
-      }
     }
   }
 }

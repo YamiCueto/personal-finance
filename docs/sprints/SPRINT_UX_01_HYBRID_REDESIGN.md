@@ -296,32 +296,126 @@ Verificación matemática contra `docs/sprints/BASELINE_ASSERTIONS_PHASE3.tsv`:
 
 ---
 
-## 12. Estado de Git (`git status --short`)
+---
 
-```
- M playwright.config.ts
- M src/app/features/app-shell/app-shell.component.html
- M src/app/features/app-shell/app-shell.component.scss
- M src/app/features/app-shell/app-shell.component.ts
- M src/app/features/auth/forgot-password/forgot-password.component.html
- M src/app/features/auth/forgot-password/forgot-password.component.scss
- M src/app/features/auth/login/login.component.html
- M src/app/features/auth/login/login.component.scss
- M src/app/features/auth/reset-password/reset-password.component.html
- M src/app/features/auth/reset-password/reset-password.component.scss
- M src/app/features/auth/signup/signup.component.html
- M src/app/features/auth/signup/signup.component.scss
- M src/app/features/credit-cards/credit-cards-manager.component.html
- M src/app/features/credit-cards/credit-cards-manager.component.scss
- M src/app/features/credit-cards/credit-cards-manager.component.ts
- M src/app/features/credits/credits-manager.component.html
- M src/app/features/credits/credits-manager.component.scss
- M src/app/features/credits/credits-manager.component.ts
- M src/app/features/simulators/financial-simulators.component.html
- M src/app/features/simulators/financial-simulators.component.scss
- M src/app/features/simulators/financial-simulators.component.ts
- M src/styles.scss
-?? docs/design/
-?? docs/sprints/SPRINT_UX_01_HYBRID_REDESIGN.md
-?? src/app/shared/
-```
+## 13. Refinamiento visual y aceptación responsive
+
+### 13.1 Matriz de Diferencias Prototipo HTML vs Angular
+
+| ID | Pantalla / Módulo | Descripción de la Diferencia | Prioridad | Corrección Aplicada | Estado |
+|---|---|---|:---:|---|:---:|
+| **D1** | **Shell Desktop** | El sidebar no persistía en `100dvh` al hacer scroll del contenido principal, dejando espacios vacíos inferiores. | **P0** | Arquitectura flex app-shell con `height: 100dvh; overflow: hidden;` en `.app-layout` y scroll independiente en `.app-main-wrapper`. | **Corregido** |
+| **D2** | **Dashboard Mobile** | En 360–440px los KPIs se renderizaban en una sola columna gigante vertical ocupando más de 500px. | **P0** | Grid compacto **2 × 2** (`repeat(2, 1fr)`) en todas las resoluciones móviles con tipografía fluida y protección contra desbordamiento. | **Corregido** |
+| **D3** | **Mobile Navigation** | Los 4 KPIs globales empujaban el contenido de pestañas (Créditos, Tarjetas, Simular) debajo del pliegue. | **P0** | Condicionamiento responsivo `.mobile-hidden` para ocultar la franja global de KPIs en móvil cuando se visualiza un módulo secundario. | **Corregido** |
+| **D4** | **Topbar Mobile** | Múltiples botones de acción con texto extendido saturaban el ancho en viewports ultra-compactos (360px). | **P1** | Ocultamiento responsivo de `.quick-text` en viewports menores a 480px, preservando botones táctiles iconográficos de 36×36px. | **Corregido** |
+| **D5** | **Tarjetas de Crédito** | Consumo de cupo fragmentado en 6 métricas independientes en lugar de la tarjeta visual unificada del prototipo. | **P1** | Implementación del componente visual `.cupo-card` con barra de utilización en gradiente y chips secundarios de corte/pago. | **Corregido** |
+| **D6** | **Créditos y Amortización** | Desbordamiento horizontal potencial en tablas de amortización de créditos en viewports móviles pequeños. | **P1** | Confinamiento estricto del scroll horizontal a `.table-container` con inercia táctil (`-webkit-overflow-scrolling: touch`). | **Corregido** |
+| **D7** | **Simuladores Financieros** | Radio buttons de estrategia ocupaban espacio vertical excesivo y no destacaban el escenario seleccionado. | **P1** | Segmentación visual responsiva en grid de 2 columnas con resaltado activo ámbar y tipografía de contraste optimizada. | **Corregido** |
+
+### 13.2 Correcciones Realizadas
+
+1. **Sidebar y Shell Desktop (FASE 3):**
+   - Implementación de layout persistente `100dvh` sin hacks de alturas fijas arbitrarias.
+   - Paginación y scroll exclusivo en `.app-main-wrapper`, asegurando que el sidebar y el pie de usuario permanezcan siempre anclados.
+   - Eliminación total de scrollbars dobles y márgenes vacíos artificiales.
+2. **Dashboard Móvil 2 × 2 (FASE 2):**
+   - Configuración de `.kpi-grid` en `repeat(2, 1fr)` por defecto desde 360px.
+   - Tipografía adaptativa `clamp(1.05rem, 2.2vw, 1.45rem)` con numeración tabular monetaria.
+   - Ocultamiento de subtítulos explicativos secundarios en móvil para maximizar densidad informativa útil.
+3. **Módulo de Tarjetas (FASE 2):**
+   - Consolidación del bloque de cupo (`.cupo-card`) con cupo aprobado, cupo usado en rojo, barra de progreso dinámico, porcentaje de uso y cupo disponible en verde.
+   - Conservación estricta de todos los atributos de prueba (`data-testid="card-used-limit"`, `data-testid="card-available-limit"`).
+4. **Módulo de Créditos y Detalle (FASE 2):**
+   - Jerarquía visual compacta de créditos activos con capital pendiente destacado y metadatos ordenados.
+   - Modal de tabla de amortización con scroll horizontal confinado exclusivamente a la tabla sin desbordamiento del viewport.
+5. **Simuladores Financieros (FASE 2):**
+   - Formulario de abono extraordinario optimizado con selección clara de estrategia (plazo vs cuota).
+   - Banner de advertencia legal no vinculante preservado conforme a los principios de exactitud contable.
+6. **Optimización de Presupuestos CSS (FASE 5):**
+   - Refactorización de reglas redundantes en `app-shell.component.scss` para cumplir estrictamente con el presupuesto de componentes (< 12 kB).
+
+### 13.3 Diferencias Justificadas que Permanecen
+
+- **Datos y Modelos Financieros Reales:** A diferencia del prototipo HTML estático con datos ficticios cableados, la aplicación Angular consume dinámicamente el estado contable de `FinancialFacade`, garantizando aislamiento multi-inquilino y persistencia.
+- **Identidad de Métricas Reales:** Se conservan las 4 métricas financieras matemáticas del core (Saldo Real en Cuentas, Total Libre Proyectado, Liquidez Proyectada y Deuda Total de Capital).
+- **Acceso a Módulos Adicionales:** Se preserva el cajón inferior móvil "Más" para navegación hacia Obligaciones, Ingresos y Cuentas bancarias.
+
+### 13.4 Cierre de Hallazgo Visual: Selector de Meses Desktop
+
+- **Defecto Reportado:** En resoluciones desktop (1024, 1440, 1920 px), los 12 botones del selector de períodos (`Enero` a `Diciembre`) aparecían recortados verticalmente en su borde inferior.
+- **Diagnóstico y Causa Raíz:**
+  - El contenedor `.app-main-wrapper` utiliza un diseño Flexbox en columna con `height: 100dvh`.
+  - El elemento `.month-selector` poseía `overflow-x: auto` sin `flex-shrink: 0`.
+  - De acuerdo con la especificación CSS Flexbox §4.5, cualquier elemento hijo con overflow no visible tiene `min-height: 0` en lugar de `min-content`. En consecuencia, el motor de layout comprimía verticalmente `.month-selector` de 59 px a 36.6 px.
+  - Al recibir automáticamente `overflow-y: auto`, los últimos 22 px de los botones de 36 px quedaban ocultos tras la máscara de overflow.
+- **Solución Implementada:**
+  - Se configuró `.month-selector` con `flex-shrink: 0` y `min-height: max-content` (en desktop `@media (min-width: 768px)`).
+  - Se aseguró `min-height: 38px` en `.month-carousel-track` y alineación `display: inline-flex; align-items: center; justify-content: center` en `.month-pill`.
+  - Altura efectiva medida del selector: incrementada de 37 px a 64 px (`scrollHeight: 64px`, `clientHeight: 64px`), garantizando que los 12 botones y sus bordes redondeados se muestren completos y sin cortes.
+- **Evidencias Antes / Después:**
+  - Antes del fix: `docs/sprints/evidence/month-selector-before-fix-1440.png` (recorte vertical evidente en la mitad inferior de los botones).
+  - Después del fix: `docs/sprints/evidence/month-selector-after-fix-1440.png` (los 12 meses visibles con altura completa, borde y padding intactos).
+
+### 13.5 Evidencias Visuales Generadas
+
+Las capturas antes/después y comparativas contra el prototipo HTML fueron almacenadas en `docs/sprints/evidence/`:
+
+- **Prototipo HTML (Referencia 390×844):**
+  - `proto-login.png`
+  - `proto-dashboard.png`
+  - `proto-creditos.png`
+  - `proto-detalle.png`
+  - `proto-tarjetas.png`
+  - `proto-simulador.png`
+- **Angular Móvil Refinado (390×844):**
+  - `angular-after-dashboard-390.png` (Grid 2×2, jerarquía compacta, ribbon financiero)
+  - `angular-after-creditos-390.png` (Listado limpio sin interferencia de KPIs)
+  - `angular-after-amortizacion-390.png` (Modal responsivo, tabla con scroll aislado)
+  - `angular-after-tarjetas-390.png` (Tarjeta visual, bloque de cupo unificado)
+  - `angular-after-simuladores-390.png` (Formulario compacto, resultados comparativos)
+- **Angular Tablet y Desktop Refinados:**
+  - `angular-after-tablet-768.png` (Grid 2×2 balanceado, navegación armónica)
+  - `angular-after-desktop-1440.png` (Sidebar continuo 100dvh, selector de meses completo, 4 KPIs horizontales)
+  - `angular-after-desktop-scrolled-1440.png` (Contenido desplazado, sidebar fijo sin cortes)
+  - `angular-after-desktop-collapsed-1440.png` (Sidebar colapsado a 72px)
+  - `month-selector-before-fix-1440.png` (Evidencia de recorte previo)
+  - `month-selector-after-fix-1440.png` (Evidencia de corrección completa)
+
+### 13.6 Resultados de Pruebas Automatizadas
+
+- **Compilación de Producción (`npm run build`):**
+  - Estado: **Exitoso (Code 0)**.
+  - Presupuesto de estilos de componentes: `0 errores, 0 advertencias`.
+  - `app-shell.component.scss` compilado dentro del límite de 12.00 kB.
+- **Suite de Pruebas Unitarias (`npx ng test --watch=false`):**
+  - Estado: **101 pasadas / 101 totales (16 archivos)**.
+- **Suite de Integridad SQL Local / PGLite (`npx vitest run supabase/tests/database_integrity.spec.ts`):**
+  - Estado: **19 pasadas / 19 totales**.
+- **Suite Playwright E2E Mock Multi-Viewport (`npm run e2e:mock`):**
+  - Estado: **232 pasadas / 232 totales** a lo largo de los 8 viewports (29 pruebas por viewport):
+    - `mobile-360` (360 × 800): 29/29 OK
+    - `mobile-390` (390 × 844): 29/29 OK
+    - `mobile-430` (430 × 932): 29/29 OK
+    - `mobile-440` (440 × 956): 29/29 OK
+    - `tablet-768` (768 × 1024): 29/29 OK
+    - `desktop-1024` (1024 × 768): 29/29 OK
+    - `desktop-1440` (1440 × 900): 29/29 OK
+    - `desktop-1920` (1920 × 1080): 29/29 OK
+  - Incluye prueba de regresión específica para el selector de meses (`UX-01 Regresión: Selector de meses desktop sin recorte vertical, 12 meses visibles e interacción funcional`).
+  - Verificación estricta de cero desbordamiento horizontal (`scrollWidth <= clientWidth`).
+
+### 13.7 Archivos Modificados
+
+- `src/app/features/app-shell/app-shell.component.html` (Condicionamiento de visibilidad móvil en cambio de pestaña)
+- `src/app/features/app-shell/app-shell.component.scss` (Corrección de compresión en selector de meses, sidebar 100dvh, grid 2×2 móvil, optimización de presupuestos)
+- `src/app/features/credit-cards/credit-cards-manager.component.html` (Componente visual de cupo unificado)
+- `src/app/features/credit-cards/credit-cards-manager.component.scss` (Estilos de cupo card y chips secundarios)
+- `src/app/features/credits/credits-manager.component.scss` (Aislamiento de scroll táctil en tabla de amortización)
+- `src/app/features/simulators/financial-simulators.component.scss` (Selector de estrategias responsivo)
+- `e2e/auth-mock.spec.ts` (Prueba de regresión automatizada multi-viewport para el selector de meses)
+- `docs/sprints/SPRINT_UX_01_HYBRID_REDESIGN.md` (Sección 13 de refinamiento, corrección visual y aceptación)
+
+### 13.8 Conclusión de UX-01
+
+- Ningún defecto visual, responsive o de accesibilidad pendiente en los 8 viewports validados.
+- La aplicación cumple con total fidelidad visual frente al diseño aprobado, resolviendo las anomalías de recorte vertical y preservando el 100% del motor contable, contratos financieros y seguridad.

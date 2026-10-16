@@ -201,7 +201,7 @@
     }
 
     <!-- Selector de Período Mensual (Horizontal Carousel / Thumb-Zone) -->
-    <nav class="month-selector" aria-label="Selector de Período Mensual">
+    <nav class="month-selector" [class.mobile-hidden]="activeTab() !== 'waterfall' && activeTab() !== 'obligations'" aria-label="Selector de Período Mensual">
       <div class="month-carousel-track">
         @for (m of monthsList; track m.value) {
           <button
@@ -217,7 +217,7 @@
     </nav>
 
     <!-- ── 3. SECCIÓN DE MÉTRICAS / KPIS FINANCIEROS ─────────────────── -->
-    <section class="kpi-section" aria-label="Métricas Principales">
+    <section class="kpi-section" [class.mobile-hidden]="activeTab() !== 'waterfall'" aria-label="Métricas Principales">
       <div class="kpi-grid">
         <!-- Card 1: Saldo Real en Cuentas -->
         <div class="kpi-card real-balance">

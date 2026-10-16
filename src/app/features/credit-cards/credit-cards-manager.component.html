@@ -70,51 +70,54 @@
             <div class="card-status-badge active">Activa</div>
           </div>
 
-          <!-- Barra de Consumo de Cupo -->
-          <div class="cupo-progress-section">
-            <div class="cupo-labels">
-              <span class="cupo-used-label">Cupo Utilizado: {{ calculateUsagePercent(card) }}%</span>
-              <span class="cupo-avail-label text-green" data-testid="card-available-limit">
-                Disponible: {{ formatMoney(card.availableCreditLimit ?? 0) }}
+          <!-- Bloque de Cupo (Fidelidad Prototipo) -->
+          <div class="cupo-card">
+            <div class="cupo-row">
+              <span class="cupo-lbl">Cupo Aprobado</span>
+              <span class="cupo-val font-mono">{{ formatMoney(card.approvedCreditLimit || 0) }}</span>
+            </div>
+            <div class="cupo-row">
+              <span class="cupo-lbl">Cupo Usado</span>
+              <span class="cupo-val font-mono text-danger" data-testid="card-used-limit">
+                {{ formatMoney(card.usedCreditLimit ?? card.currentPrincipalBalance ?? 0) }}
               </span>
             </div>
-            <div class="progress-track" role="progressbar" [attr.aria-valuenow]="calculateUsagePercent(card)" aria-valuemin="0" aria-valuemax="100">
+            <div class="cupo-bar" role="progressbar" [attr.aria-valuenow]="calculateUsagePercent(card)" aria-valuemin="0" aria-valuemax="100">
               <div
-                class="progress-fill"
+                class="cupo-fill"
                 [style.width.%]="calculateUsagePercent(card)"
                 [class.warn]="calculateUsagePercent(card) > 50 && calculateUsagePercent(card) <= 80"
                 [class.danger]="calculateUsagePercent(card) > 80"
               ></div>
             </div>
-          </div>
-
-          <!-- Métricas del Producto -->
-          <div class="card-metrics-grid">
-            <div class="metric-box">
-              <span class="metric-title">Cupo Aprobado</span>
-              <span class="metric-num">{{ formatMoney(card.approvedCreditLimit || 0) }}</span>
+            <div class="cupo-sub-row">
+              <span>{{ calculateUsagePercent(card) }}% utilizado</span>
             </div>
-            <div class="metric-box">
-              <span class="metric-title">Cupo Utilizado</span>
-              <span class="metric-num text-amber" data-testid="card-used-limit">
-                {{ formatMoney(card.usedCreditLimit ?? card.currentPrincipalBalance ?? 0) }}
+            <div class="cupo-row mt-sm">
+              <span class="cupo-lbl">Disponible</span>
+              <span class="cupo-val font-mono text-green" data-testid="card-available-limit">
+                {{ formatMoney(card.availableCreditLimit ?? 0) }}
               </span>
             </div>
-            <div class="metric-box">
-              <span class="metric-title">Día de Corte</span>
-              <span class="metric-num font-mono">Día {{ card.statementCutoffDay || 15 }}</span>
+          </div>
+
+          <!-- Métricas Secundarias del Producto -->
+          <div class="card-meta-chips">
+            <div class="meta-chip">
+              <span class="chip-label">Corte</span>
+              <span class="chip-val font-mono">Día {{ card.statementCutoffDay || 15 }}</span>
             </div>
-            <div class="metric-box">
-              <span class="metric-title">Día Límite Pago</span>
-              <span class="metric-num font-mono">Día {{ card.paymentDueDay || card.duePaymentDay || 5 }}</span>
+            <div class="meta-chip">
+              <span class="chip-label">Límite Pago</span>
+              <span class="chip-val font-mono">Día {{ card.paymentDueDay || card.duePaymentDay || 5 }}</span>
             </div>
-            <div class="metric-box">
-              <span class="metric-title">Tasa EA / NMV</span>
-              <span class="metric-num">{{ card.effectiveAnnualRate }}% EA ({{ card.nominalRateMonthly }}% NMV)</span>
+            <div class="meta-chip">
+              <span class="chip-label">Tasa</span>
+              <span class="chip-val">{{ card.effectiveAnnualRate }}% EA</span>
             </div>
-            <div class="metric-box">
-              <span class="metric-title">Cuota de Manejo</span>
-              <span class="metric-num">{{ formatMoney(card.managementFeeMonthly || 0) }}</span>
+            <div class="meta-chip">
+              <span class="chip-label">Manejo</span>
+              <span class="chip-val font-mono">{{ formatMoney(card.managementFeeMonthly || 0) }}</span>
             </div>
           </div>
 

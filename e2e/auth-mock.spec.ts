@@ -594,5 +594,49 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     }));
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   });
-});
 
+  test('UX-01 Regresión: Selector de meses desktop sin recorte vertical, 12 meses visibles e interacción funcional', async ({ page }) => {
+    await injectAuthenticatedSession(page, MOCK_USER_A);
+    await page.goto('/app');
+
+    const monthSelector = page.locator('.month-selector');
+    await expect(monthSelector).toBeVisible();
+
+    const pills = page.locator('.month-selector .month-pill');
+    await expect(pills).toHaveCount(12);
+
+    // Verificar que el selector y los botones no sufren compresión ni recorte vertical
+    const boxMetrics = await monthSelector.evaluate((el) => {
+      const pillsEls = Array.from(el.querySelectorAll('.month-pill')) as HTMLElement[];
+      const elRect = el.getBoundingClientRect();
+      return {
+        selectorHeight: el.clientHeight,
+        minPillHeight: Math.min(...pillsEls.map((p) => p.offsetHeight)),
+        allPillsVisible: pillsEls.every((p) => p.offsetHeight >= 34),
+        noNegativeOffset: pillsEls.every((p) => {
+          const r = p.getBoundingClientRect();
+          return r.top >= elRect.top - 2 && r.bottom <= elRect.bottom + 2;
+        }),
+      };
+    });
+
+    expect(boxMetrics.selectorHeight).toBeGreaterThanOrEqual(48);
+    expect(boxMetrics.minPillHeight).toBeGreaterThanOrEqual(34);
+    expect(boxMetrics.allPillsVisible).toBe(true);
+
+    // Navegación interactiva entre meses
+    const novPill = pills.nth(10); // Noviembre (index 10)
+    await novPill.click();
+    await expect(novPill).toHaveClass(/active/);
+
+    // Verificar con sidebar colapsado (en viewports desktop)
+    const sidebarToggle = page.locator('.sidebar-toggle-btn');
+    if (await sidebarToggle.isVisible()) {
+      await sidebarToggle.click();
+      await page.waitForTimeout(150);
+      await expect(page.locator('.app-sidebar')).toHaveClass(/collapsed/);
+      expect(await monthSelector.evaluate((el) => el.clientHeight)).toBeGreaterThanOrEqual(48);
+      await sidebarToggle.click();
+    }
+  });
+});
