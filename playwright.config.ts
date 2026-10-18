@@ -85,6 +85,18 @@ export default defineConfig({
         viewport: { width: 1920, height: 1080 },
       },
     },
+    {
+      name: 'webkit-mobile-390',
+      use: {
+        ...devices['iPhone 14'],
+      },
+    },
+    {
+      name: 'webkit-mobile-430',
+      use: {
+        ...devices['iPhone 14 Plus'],
+      },
+    },
   ],
   webServer: {
     command: 'npm start',

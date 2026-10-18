@@ -26,6 +26,7 @@ import {
   RecordTransferDTO,
   ReverseOperationDTO,
 } from './financial-repositories.contract';
+import { FinancialCalculatorV2 } from '../services/financial-calculator-v2';
 
 /**
  * Adaptador Remoto de Supabase.
@@ -209,18 +210,162 @@ export class SupabaseFinancialAdapter
   }
 
   async getCreditCardPurchases(userId: string, creditCardId?: string): Promise<CreditCardPurchase[]> {
-    // Pendiente: requiere migración de esquema para credit_card_purchases en Supabase
-    throw new Error('getCreditCardPurchases no está soportado en el esquema remoto actual. Operación diferida a fase de migración SQL.');
+    let query = this.client
+      .from('credit_card_purchases')
+      .select('*')
+      .eq('user_id', userId)
+      .order('purchase_date', { ascending: false });
+
+    if (creditCardId) {
+      query = query.eq('product_id', creditCardId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapCreditCardPurchase);
   }
 
   async createCreditCardPurchase(userId: string, dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase> {
-    // Pendiente: requiere migración de esquema para credit_card_purchases en Supabase
-    throw new Error('createCreditCardPurchase no está soportado en el esquema remoto actual. Operación diferida a fase de migración SQL.');
+    const { data, error } = await this.client.rpc('create_credit_card_purchase', {
+      p_user_id: userId,
+      p_credit_card_id: dto.creditCardId,
+      p_description: dto.description,
+      p_amount: dto.amount,
+      p_total_installments: dto.totalInstallments,
+      p_interest_rate_monthly: dto.interestRateMonthly ?? null,
+      p_purchase_date: dto.purchaseDate ?? new Date().toISOString().substring(0, 10),
+    });
+
+    if (error) throw new Error(error.message);
+
+    const { data: purchase, error: fetchError } = await this.client
+      .from('credit_card_purchases')
+      .select('*')
+      .eq('id', data.purchase_id)
+      .single();
+
+    if (fetchError) throw new Error(fetchError.message);
+    return this.mapCreditCardPurchase(purchase);
   }
 
   async generateCreditInstallmentObligation(userId: string, dto: GenerateInstallmentDTO): Promise<PeriodObligation> {
-    // Pendiente: requiere función RPC o migración de generación automática en Supabase remoto
-    throw new Error('generateCreditInstallmentObligation no está soportado en el esquema remoto actual. Operación diferida a fase de migración SQL.');
+    const product = await this.getCreditProductById(userId, dto.creditProductId);
+    if (!product) {
+      throw new Error('Producto de crédito no encontrado o no pertenece al usuario');
+    }
+
+    const { data: existing, error: existingError } = await this.client
+      .from('period_obligations')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('credit_product_id', dto.creditProductId)
+      .eq('period_year', dto.periodYear)
+      .eq('period_month', dto.periodMonth)
+      .maybeSingle();
+
+    if (existingError) throw new Error(existingError.message);
+    if (existing) return this.mapPeriodObligation(existing);
+
+    let obName = '';
+    let totalAmount = 0;
+    let capitalComp = 0;
+    let interestComp = 0;
+    let insuranceComp = 0;
+    let feesComp = 0;
+
+    if (product.type === 'CREDIT_CARD') {
+      const purchases = await this.getCreditCardPurchases(userId, product.id);
+      const pendingPurchases = purchases.filter((p) => p.status === 'PENDING');
+      const statement = FinancialCalculatorV2.calculateCreditCardStatement(pendingPurchases, product.managementFeeMonthly || 0);
+
+      obName = `Extracto Tarjeta ${product.name} (${dto.periodMonth}/${dto.periodYear})`;
+      totalAmount = statement.totalStatementAmount;
+      capitalComp = statement.totalCapitalPayment;
+      interestComp = statement.totalInterestPayment;
+      insuranceComp = product.associatedInsurancesMonthly || 0;
+      feesComp = statement.managementFee;
+      totalAmount = FinancialCalculatorV2.fromCents(
+        FinancialCalculatorV2.toCents(totalAmount) + FinancialCalculatorV2.toCents(insuranceComp)
+      );
+    } else {
+      const remainingN = product.remainingInstallments || 12;
+      const totalN = product.totalInstallments || 12;
+      const installmentNum = totalN - remainingN + 1;
+
+      let scheduleItem: any;
+      if (product.amortizationMethod === 'GERMAN') {
+        const schedule = FinancialCalculatorV2.generateGermanAmortizationSchedule(
+          product.currentPrincipalBalance,
+          product.nominalRateMonthly,
+          remainingN,
+          product.associatedInsurancesMonthly || 0
+        );
+        scheduleItem = schedule[0];
+      } else {
+        const schedule = FinancialCalculatorV2.generateFrenchAmortizationSchedule(
+          product.currentPrincipalBalance,
+          product.nominalRateMonthly,
+          remainingN,
+          product.associatedInsurancesMonthly || 0
+        );
+        scheduleItem = schedule[0];
+      }
+
+      if (!scheduleItem) {
+        throw new Error('No se puede generar cuota: el crédito ya no tiene saldo pendiente');
+      }
+
+      obName = `Cuota ${installmentNum}/${totalN} ${product.name}`;
+      totalAmount = scheduleItem.totalPayment;
+      capitalComp = scheduleItem.principalPayment;
+      interestComp = scheduleItem.interestPayment;
+      insuranceComp = scheduleItem.insurancePayment;
+      feesComp = product.managementFeeMonthly || 0;
+    }
+
+    const dueDay = product.paymentDueDay || product.duePaymentDay || product.statementCutoffDay || 15;
+    const computedDueDate = dto.dueDate || `${dto.periodYear}-${String(dto.periodMonth).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}`;
+
+    const { data: insertedOb, error: insertError } = await this.client
+      .from('period_obligations')
+      .insert({
+        user_id: userId,
+        credit_product_id: dto.creditProductId,
+        source_type: 'CREDIT_INSTALLMENT',
+        period_year: dto.periodYear,
+        period_month: dto.periodMonth,
+        name: obName,
+        amount: totalAmount,
+        amount_paid: 0,
+        amount_pending: totalAmount,
+        status: 'PENDING',
+        due_date: computedDueDate,
+        capital_component: capitalComp,
+        interest_current_component: interestComp,
+        interest_mora_component: 0,
+        insurance_component: insuranceComp,
+        other_fees_component: feesComp,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        const { data: deduped, error: dedupError } = await this.client
+          .from('period_obligations')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('credit_product_id', dto.creditProductId)
+          .eq('period_year', dto.periodYear)
+          .eq('period_month', dto.periodMonth)
+          .maybeSingle();
+        if (dedupError) throw new Error(dedupError.message);
+        if (deduped) return this.mapPeriodObligation(deduped);
+      }
+      throw new Error(insertError.message);
+    }
+
+    return this.mapPeriodObligation(insertedOb);
   }
 
   // --- REPOSITORIO DE OBLIGACIONES Y PAGOS RPC ---
@@ -431,6 +576,7 @@ export class SupabaseFinancialAdapter
       disbursementDate: raw.disbursement_date,
       statementCutoffDay: raw.statement_cutoff_day,
       duePaymentDay: raw.due_payment_day,
+      paymentDueDay: raw.due_payment_day,
       totalInstallments: raw.total_installments,
       remainingInstallments: raw.remaining_installments,
       nominalRateMonthly: Number(raw.nominal_rate_monthly || 0),
@@ -483,6 +629,24 @@ export class SupabaseFinancialAdapter
       receivedDate: raw.received_date,
       isReversed: raw.is_reversed || false,
       notes: raw.notes,
+      createdAt: raw.created_at,
+    };
+  }
+
+  private mapCreditCardPurchase(raw: any): CreditCardPurchase {
+    return {
+      id: raw.id,
+      productId: raw.product_id,
+      userId: raw.user_id,
+      purchaseDate: raw.purchase_date,
+      description: raw.description,
+      originalAmount: Number(raw.original_amount || 0),
+      totalInstallments: raw.total_installments,
+      remainingInstallments: raw.remaining_installments,
+      interestRateMonthly: Number(raw.interest_rate_monthly || 0),
+      monthlyCapital: Number(raw.monthly_capital || 0),
+      monthlyInterest: Number(raw.monthly_interest || 0),
+      status: raw.status,
       createdAt: raw.created_at,
     };
   }

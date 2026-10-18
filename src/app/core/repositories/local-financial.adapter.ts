@@ -956,11 +956,11 @@ export class LocalFinancialAdapter
 
     const isPrepayment = dto.paymentType === 'PREPAYMENT_CAPITAL';
     if (!isPrepayment) {
-      if (dto.amount > obligation.amountPending) {
-        throw new Error(`Intento de sobrepago: el monto ${dto.amount} excede el saldo pendiente exigible ${obligation.amountPending}`);
-      }
       if (obligation.status === 'PAID') {
         throw new Error('La obligación ya se encuentra totalmente cancelada');
+      }
+      if (dto.amount > obligation.amountPending) {
+        throw new Error(`Intento de sobrepago: el monto ${dto.amount} excede el saldo pendiente exigible ${obligation.amountPending}`);
       }
     }
 

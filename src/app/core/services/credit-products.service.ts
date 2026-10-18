@@ -9,6 +9,8 @@ import {
 } from '../repositories/financial-repositories.contract';
 import { CreditProduct, CreditCardPurchase, PeriodObligation } from '../models/financial-v2.model';
 import { AuthService } from './auth.service';
+import { FINANCIAL_CONFIG } from '../config/financial.config';
+import { resolveUserId } from '../utils/resolve-user-id';
 
 @Injectable({
   providedIn: 'root',
@@ -16,17 +18,18 @@ import { AuthService } from './auth.service';
 export class CreditProductsService {
   private readonly repo = inject(CREDIT_PRODUCT_REPOSITORY);
   private readonly auth = inject(AuthService);
+  private readonly config = inject(FINANCIAL_CONFIG);
 
-  private get userId(): string {
-    return this.auth.currentUser()?.id || 'default-user';
+  private resolveUserId(): Promise<string> {
+    return resolveUserId(this.auth, this.config);
   }
 
   async getCreditProducts(): Promise<CreditProduct[]> {
-    return this.repo.getCreditProducts(this.userId);
+    return this.repo.getCreditProducts(await this.resolveUserId());
   }
 
   async getCreditProductById(creditId: string): Promise<CreditProduct | null> {
-    return this.repo.getCreditProductById(this.userId, creditId);
+    return this.repo.getCreditProductById(await this.resolveUserId(), creditId);
   }
 
   async createCreditProduct(dto: CreateCreditProductDTO): Promise<CreditProduct> {
@@ -42,7 +45,7 @@ export class CreditProductsService {
         throw new Error('El monto del crédito debe ser mayor a 0');
       }
     }
-    return this.repo.createCreditProduct(this.userId, dto);
+    return this.repo.createCreditProduct(await this.resolveUserId(), dto);
   }
 
   async recordRestructure(dto: RecordRestructureDTO): Promise<FinancialOperationResult> {
@@ -52,11 +55,11 @@ export class CreditProductsService {
     if (dto.newTotalInstallments <= 0) {
       throw new Error('El plazo de cuotas debe ser mayor a cero');
     }
-    return this.repo.recordRestructure(this.userId, dto);
+    return this.repo.recordRestructure(await this.resolveUserId(), dto);
   }
 
   async getCreditCardPurchases(creditCardId?: string): Promise<CreditCardPurchase[]> {
-    return this.repo.getCreditCardPurchases(this.userId, creditCardId);
+    return this.repo.getCreditCardPurchases(await this.resolveUserId(), creditCardId);
   }
 
   async createCreditCardPurchase(dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase> {
@@ -66,10 +69,10 @@ export class CreditProductsService {
     if (dto.totalInstallments < 1) {
       throw new Error('El número de cuotas debe ser como mínimo 1');
     }
-    return this.repo.createCreditCardPurchase(this.userId, dto);
+    return this.repo.createCreditCardPurchase(await this.resolveUserId(), dto);
   }
 
   async generateCreditInstallmentObligation(dto: GenerateInstallmentDTO): Promise<PeriodObligation> {
-    return this.repo.generateCreditInstallmentObligation(this.userId, dto);
+    return this.repo.generateCreditInstallmentObligation(await this.resolveUserId(), dto);
   }
 }

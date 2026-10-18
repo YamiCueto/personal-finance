@@ -6,6 +6,8 @@ import {
   FinancialOperationResult,
 } from '../repositories/financial-repositories.contract';
 import { AuthService } from './auth.service';
+import { FINANCIAL_CONFIG } from '../config/financial.config';
+import { resolveUserId } from '../utils/resolve-user-id';
 
 @Injectable({
   providedIn: 'root',
@@ -13,11 +15,12 @@ import { AuthService } from './auth.service';
 export class FinancialOperationsService {
   private readonly repo = inject(TRANSACTIONAL_OPERATION_REPOSITORY);
   private readonly auth = inject(AuthService);
+  private readonly config = inject(FINANCIAL_CONFIG);
 
   private activeTransferIntents = new Set<string>();
 
-  private get userId(): string {
-    return this.auth.currentUser()?.id || 'default-user';
+  private resolveUserId(): Promise<string> {
+    return resolveUserId(this.auth, this.config);
   }
 
   async recordTransfer(dto: RecordTransferDTO): Promise<FinancialOperationResult> {
@@ -36,8 +39,9 @@ export class FinancialOperationsService {
     this.activeTransferIntents.add(intentKey);
 
     try {
+      const userId = await this.resolveUserId();
       const idempotencyKey = dto.idempotencyKey || `tr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      return await this.repo.recordTransfer(this.userId, {
+      return await this.repo.recordTransfer(userId, {
         ...dto,
         idempotencyKey,
       });
@@ -50,6 +54,6 @@ export class FinancialOperationsService {
     if (!dto.reason || dto.reason.trim().length === 0) {
       throw new Error('Debe indicarse un motivo justificativo para el reverso financiero');
     }
-    return this.repo.reverseOperation(this.userId, dto);
+    return this.repo.reverseOperation(await this.resolveUserId(), dto);
   }
 }

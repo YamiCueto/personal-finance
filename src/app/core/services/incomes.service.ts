@@ -6,6 +6,8 @@ import {
 } from '../repositories/financial-repositories.contract';
 import { Income } from '../models/financial-v2.model';
 import { AuthService } from './auth.service';
+import { FINANCIAL_CONFIG } from '../config/financial.config';
+import { resolveUserId } from '../utils/resolve-user-id';
 
 @Injectable({
   providedIn: 'root',
@@ -13,15 +15,16 @@ import { AuthService } from './auth.service';
 export class IncomesService {
   private readonly repo = inject(INCOME_REPOSITORY);
   private readonly auth = inject(AuthService);
+  private readonly config = inject(FINANCIAL_CONFIG);
 
   private activeIncomeIntents = new Set<string>();
 
-  private get userId(): string {
-    return this.auth.currentUser()?.id || 'default-user';
+  private resolveUserId(): Promise<string> {
+    return resolveUserId(this.auth, this.config);
   }
 
   async getIncomes(year: number, month: number): Promise<Income[]> {
-    return this.repo.getIncomes(this.userId, year, month);
+    return this.repo.getIncomes(await this.resolveUserId(), year, month);
   }
 
   async recordIncome(dto: CreateIncomeDTO): Promise<FinancialOperationResult> {
@@ -40,8 +43,9 @@ export class IncomesService {
     this.activeIncomeIntents.add(intentKey);
 
     try {
+      const userId = await this.resolveUserId();
       const idempotencyKey = dto.idempotencyKey || `inc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      return await this.repo.recordIncome(this.userId, {
+      return await this.repo.recordIncome(userId, {
         ...dto,
         idempotencyKey,
       });

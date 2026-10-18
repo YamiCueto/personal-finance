@@ -182,7 +182,7 @@ export class AuthService {
 
   async resetPasswordForEmail(email: string, redirectTo?: string): Promise<PasswordRecoveryResult> {
     try {
-      const redirectUri = redirectTo || `${window.location.origin}/auth/reset-password`;
+      const redirectUri = redirectTo || new URL('auth/reset-password', document.baseURI).href;
       const { error } = await this.supabaseService.clientInstance.auth.resetPasswordForEmail(
         email.trim(),
         {

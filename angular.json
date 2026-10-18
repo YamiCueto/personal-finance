@@ -48,6 +48,34 @@
               ],
               "outputHashing": "all"
             },
+            "github-pages": {
+              "baseHref": "/personal-finance/",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "12kB",
+                  "maximumError": "16kB"
+                }
+              ],
+              "outputHashing": "all",
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public",
+                  "ignore": ["manifest.webmanifest"]
+                },
+                {
+                  "glob": "manifest.webmanifest",
+                  "input": "public-github-pages",
+                  "output": "/"
+                }
+              ]
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,

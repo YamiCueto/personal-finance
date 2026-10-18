@@ -7,6 +7,8 @@ import {
 } from '../repositories/financial-repositories.contract';
 import { PeriodObligation } from '../models/financial-v2.model';
 import { AuthService } from './auth.service';
+import { FINANCIAL_CONFIG } from '../config/financial.config';
+import { resolveUserId } from '../utils/resolve-user-id';
 
 @Injectable({
   providedIn: 'root',
@@ -14,20 +16,20 @@ import { AuthService } from './auth.service';
 export class PeriodObligationsService {
   private readonly repo = inject(PERIOD_OBLIGATION_REPOSITORY);
   private readonly auth = inject(AuthService);
+  private readonly config = inject(FINANCIAL_CONFIG);
 
-  // Registro de intenciones de pago en progreso para prevenir doble clic
   private activePaymentIntents = new Set<string>();
 
-  private get userId(): string {
-    return this.auth.currentUser()?.id || 'default-user';
+  private resolveUserId(): Promise<string> {
+    return resolveUserId(this.auth, this.config);
   }
 
   async getPeriodObligations(year: number, month: number): Promise<PeriodObligation[]> {
-    return this.repo.getPeriodObligations(this.userId, year, month);
+    return this.repo.getPeriodObligations(await this.resolveUserId(), year, month);
   }
 
   async getObligationById(obligationId: string): Promise<PeriodObligation | null> {
-    return this.repo.getObligationById(this.userId, obligationId);
+    return this.repo.getObligationById(await this.resolveUserId(), obligationId);
   }
 
   async createPeriodObligation(dto: CreateObligationDTO): Promise<PeriodObligation> {
@@ -37,7 +39,7 @@ export class PeriodObligationsService {
     if (dto.amount <= 0) {
       throw new Error('El monto de la obligación debe ser mayor a 0');
     }
-    return this.repo.createPeriodObligation(this.userId, dto);
+    return this.repo.createPeriodObligation(await this.resolveUserId(), dto);
   }
 
   async recordPayment(dto: RecordPaymentDTO): Promise<FinancialOperationResult> {
@@ -53,9 +55,9 @@ export class PeriodObligationsService {
     this.activePaymentIntents.add(intentKey);
 
     try {
-      // Si no se proporcionó una clave de idempotencia, generar un identificador único seguro
+      const userId = await this.resolveUserId();
       const idempotencyKey = dto.idempotencyKey || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `pay-${dto.obligationId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
-      return await this.repo.recordPayment(this.userId, {
+      return await this.repo.recordPayment(userId, {
         ...dto,
         idempotencyKey,
       });
