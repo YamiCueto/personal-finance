@@ -65,7 +65,7 @@ export class LocalFinancialAdapter
   private idempotencyStore = new Map<string, { result: FinancialOperationResult; payload: any }>();
 
   // Caché de idempotencia para compras de tarjeta (tipo distinto a FinancialOperationResult)
-  private purchaseIdempotencyStore = new Map<string, { result: CreditCardPurchase; payload: { amount: number; creditCardId: string } }>();
+  private purchaseIdempotencyStore = new Map<string, { result: CreditCardPurchase; payload: { amount: number; creditCardId: string; totalInstallments: number } }>();
 
   constructor() {
     this.seedDefaultUserData('default-user');
@@ -713,8 +713,8 @@ export class LocalFinancialAdapter
       const cacheKey = `${userId}:${dto.idempotencyKey}`;
       const existing = this.purchaseIdempotencyStore.get(cacheKey);
       if (existing) {
-        if (existing.payload.amount !== dto.amount || existing.payload.creditCardId !== dto.creditCardId) {
-          throw new Error(`Conflicto de idempotencia: la clave ${dto.idempotencyKey} ya fue utilizada con parámetros diferentes`);
+        if (existing.payload.amount !== dto.amount || existing.payload.creditCardId !== dto.creditCardId || existing.payload.totalInstallments !== dto.totalInstallments) {
+          throw new Error(`Conflicto de idempotencia: la clave ${dto.idempotencyKey} ya fue utilizada con parámetros diferentes (monto, tarjeta o cuotas no coinciden)`);
         }
         return existing.result;
       }
@@ -769,7 +769,7 @@ export class LocalFinancialAdapter
 
     if (dto.idempotencyKey) {
       this.purchaseIdempotencyStore.set(`${userId}:${dto.idempotencyKey}`, {
-        payload: { amount: dto.amount, creditCardId: dto.creditCardId },
+        payload: { amount: dto.amount, creditCardId: dto.creditCardId, totalInstallments: dto.totalInstallments },
         result: purchase,
       });
     }
