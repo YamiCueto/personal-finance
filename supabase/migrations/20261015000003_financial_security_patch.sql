@@ -506,13 +506,18 @@ BEGIN
     IF p_description IS NULL OR trim(p_description) = '' THEN RAISE EXCEPTION 'La descripción de la compra es obligatoria'; END IF;
 
     IF p_idempotency_key IS NOT NULL THEN
-        SELECT id, original_amount, product_id INTO v_existing
+        SELECT id, original_amount, product_id, total_installments INTO v_existing
         FROM public.credit_card_purchases
-        WHERE user_id = p_user_id AND idempotency_key = p_idempotency_key;
+        WHERE user_id = p_user_id AND idempotency_key = p_idempotency_key
+        FOR SHARE;
 
         IF v_existing.id IS NOT NULL THEN
-            IF v_existing.original_amount <> p_amount OR v_existing.product_id <> p_credit_card_id THEN
-                RAISE EXCEPTION 'Conflicto de idempotencia: la clave % ya fue utilizada con parámetros diferentes', p_idempotency_key;
+            IF v_existing.original_amount <> p_amount
+               OR v_existing.product_id <> p_credit_card_id
+               OR v_existing.total_installments <> p_total_installments THEN
+                RAISE EXCEPTION
+                    'Conflicto de idempotencia: la clave % ya fue utilizada con parámetros diferentes (monto, tarjeta o cuotas no coinciden)',
+                    p_idempotency_key;
             END IF;
             RETURN jsonb_build_object(
                 'success', true, 'is_replayed', true, 'purchase_id', v_existing.id,
@@ -555,25 +560,62 @@ BEGIN
 END;
 $$;
 
--- 7. CONSTRAINT UNIQUE para deduplicación de cuotas de crédito por período
+-- 7. COLUMNA E ÍNDICE DE IDEMPOTENCIA EN credit_card_purchases
+ALTER TABLE public.credit_card_purchases
+    ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(100) NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'credit_card_purchases'
+          AND indexname = 'uq_cc_purchases_user_idempotency'
+    ) THEN
+        CREATE UNIQUE INDEX uq_cc_purchases_user_idempotency
+            ON public.credit_card_purchases(user_id, idempotency_key)
+            WHERE idempotency_key IS NOT NULL;
+        RAISE NOTICE 'Índice uq_cc_purchases_user_idempotency creado.';
+    ELSE
+        RAISE NOTICE 'Índice uq_cc_purchases_user_idempotency ya existe — omitiendo creación.';
+    END IF;
+END $$;
+
+-- 8. CONSTRAINT UNIQUE para deduplicación de cuotas de crédito por período
+-- Verifica la definición real del índice antes de crear: si existe con nombre correcto pero definición
+-- diferente (ej: sin la cláusula WHERE o sin UNIQUE), falla explícitamente para evitar silenciar
+-- un índice incorrecto.
 DO $$
 DECLARE
-    v_existing_def TEXT;
-    v_expected_def TEXT := 'CREATE UNIQUE INDEX uq_period_obligation_credit_period ON public.period_obligations USING btree (user_id, credit_product_id, period_year, period_month) WHERE (credit_product_id IS NOT NULL)';
+    v_is_unique  BOOLEAN;
+    v_has_where  BOOLEAN;
+    v_indexdef   TEXT;
 BEGIN
-    SELECT indexdef INTO v_existing_def
-    FROM pg_indexes
-    WHERE schemaname = 'public'
-      AND tablename = 'period_obligations'
-      AND indexname = 'uq_period_obligation_credit_period';
+    SELECT
+        ix.indisunique,
+        ix.indpred IS NOT NULL,
+        pg_get_indexdef(ix.indexrelid)
+    INTO v_is_unique, v_has_where, v_indexdef
+    FROM pg_index     ix
+    JOIN pg_class     tbl ON tbl.oid = ix.indrelid  AND tbl.relname = 'period_obligations'
+    JOIN pg_class     idx ON idx.oid = ix.indexrelid AND idx.relname = 'uq_period_obligation_credit_period'
+    JOIN pg_namespace ns  ON ns.oid  = tbl.relnamespace AND ns.nspname = 'public';
 
-    IF v_existing_def IS NULL THEN
+    IF v_is_unique IS NULL THEN
         CREATE UNIQUE INDEX uq_period_obligation_credit_period
-        ON public.period_obligations(user_id, credit_product_id, period_year, period_month)
-        WHERE credit_product_id IS NOT NULL;
+            ON public.period_obligations(user_id, credit_product_id, period_year, period_month)
+            WHERE credit_product_id IS NOT NULL;
         RAISE NOTICE 'Índice uq_period_obligation_credit_period creado.';
+    ELSIF NOT v_is_unique THEN
+        RAISE EXCEPTION
+            'Índice uq_period_obligation_credit_period existe pero no es UNIQUE (definición: %). Corregir manualmente.',
+            v_indexdef;
+    ELSIF NOT v_has_where THEN
+        RAISE EXCEPTION
+            'Índice uq_period_obligation_credit_period existe pero le falta la cláusula WHERE (definición: %). Corregir manualmente.',
+            v_indexdef;
     ELSE
-        RAISE NOTICE 'Índice uq_period_obligation_credit_period ya existe — omitiendo creación.';
+        RAISE NOTICE 'Índice uq_period_obligation_credit_period ya existe y es correcto — omitiendo creación.';
     END IF;
 END $$;
 
