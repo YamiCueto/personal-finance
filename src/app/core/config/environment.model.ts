@@ -23,4 +23,5 @@ export interface SupabaseConfig {
 export interface Environment {
   readonly production: boolean;
   readonly supabase: SupabaseConfig;
+  readonly providerMode?: 'local-demo' | 'supabase';
 }

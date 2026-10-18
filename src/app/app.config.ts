@@ -3,13 +3,14 @@ import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideFinancialCore } from './core/providers/financial-core.provider';
+import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     { provide: LOCALE_ID, useValue: 'es-CO' },
-    provideFinancialCore(),
+    provideFinancialCore(environment.providerMode ? { providerMode: environment.providerMode } : {}),
   ],
 };
 
