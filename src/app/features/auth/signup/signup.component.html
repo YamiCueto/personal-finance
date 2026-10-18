@@ -1,12 +1,12 @@
 <main class="signup-viewport" role="main">
   <div class="signup-card">
     <header class="signup-header">
-      <div class="badge-vault" aria-label="System Identity">
+      <div class="badge-vault" aria-label="Identidad del Sistema">
         <span class="vault-dot" aria-hidden="true"></span>
-        <span class="vault-label">Financial Control System</span>
+        <span class="vault-label">Control Financiero Personal</span>
       </div>
       <div class="wordmark">personal<em>.</em></div>
-      <h1 class="vault-title">Create Vault Account</h1>
+      <h1 class="vault-title">Crear Cuenta en la Bóveda</h1>
       <p class="vault-description">
         Establece tu bóveda financiera aislada. Seguridad multi-usuario con Row Level Security (RLS) en base de datos.
       </p>
@@ -20,7 +20,7 @@
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         <div class="alert-content">
-          <strong class="alert-title">Registration Error</strong>
+          <strong class="alert-title">Error de registro</strong>
           <p class="alert-text">{{ errorMessage() }}</p>
         </div>
       </div>
@@ -33,7 +33,7 @@
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
         <div class="alert-content">
-          <strong class="alert-title">Success</strong>
+          <strong class="alert-title">Registro exitoso</strong>
           <p class="alert-text">{{ successMessage() }}</p>
         </div>
       </div>
@@ -42,14 +42,14 @@
     <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" novalidate class="signup-form">
       <!-- Email Field -->
       <div class="form-field">
-        <label for="email" class="field-label">Correo electrónico / Email Address</label>
+        <label for="email" class="field-label">Correo electrónico</label>
         <div class="input-wrapper">
           <input
             id="email"
             type="email"
             formControlName="email"
             autocomplete="email"
-            placeholder="name@example.com"
+            placeholder="nombre@ejemplo.com"
             class="field-input"
             [class.input-invalid]="email?.invalid && (email?.dirty || email?.touched)"
             [attr.aria-invalid]="email?.invalid && (email?.dirty || email?.touched)"
@@ -59,9 +59,9 @@
         @if (email?.invalid && (email?.dirty || email?.touched)) {
           <p id="email-error" class="field-error" role="alert">
             @if (email?.hasError('required')) {
-              El correo es requerido / Email address is required.
+              El correo electrónico es requerido.
             } @else if (email?.hasError('email')) {
-              Please enter a valid email format.
+              Ingresa un formato de correo electrónico válido.
             }
           </p>
         }
@@ -69,7 +69,7 @@
 
       <!-- Password Field -->
       <div class="form-field">
-        <label for="password" class="field-label">Contraseña maestra / Master Password</label>
+        <label for="password" class="field-label">Contraseña maestra</label>
         <div class="input-wrapper">
           <input
             id="password"
@@ -86,21 +86,21 @@
             type="button"
             class="btn-toggle-visibility"
             (click)="togglePasswordVisibility()"
-            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Ver contraseña'"
             tabindex="0"
           >
-            {{ showPassword() ? 'Hide' : 'Show' }}
+            {{ showPassword() ? 'Ocultar' : 'Ver' }}
           </button>
         </div>
-        <p id="password-hint" class="field-hint">Mínimo 8 caracteres con letras y números / Letters and numbers.</p>
+        <p id="password-hint" class="field-hint">Mínimo 8 caracteres con letras y números.</p>
         @if (password?.invalid && (password?.dirty || password?.touched)) {
           <p id="password-error" class="field-error" role="alert">
             @if (password?.hasError('required')) {
-              Password is required.
+              La contraseña es requerida.
             } @else if (password?.hasError('minlength')) {
-              Password must be at least 8 characters long.
+              La contraseña debe tener al menos 8 caracteres.
             } @else if (password?.hasError('passwordStrength')) {
-              Password must include at least one letter and one number.
+              La contraseña debe incluir al menos una letra y un número.
             }
           </p>
         }
@@ -108,7 +108,7 @@
 
       <!-- Password Confirmation Field -->
       <div class="form-field">
-        <label for="passwordConfirmation" class="field-label">Confirmar Contraseña / Confirm Password</label>
+        <label for="passwordConfirmation" class="field-label">Confirmar contraseña maestra</label>
         <div class="input-wrapper">
           <input
             id="passwordConfirmation"
@@ -125,21 +125,21 @@
             type="button"
             class="btn-toggle-visibility"
             (click)="toggleConfirmationVisibility()"
-            [attr.aria-label]="showConfirmation() ? 'Hide confirmation password' : 'Show confirmation password'"
+            [attr.aria-label]="showConfirmation() ? 'Ocultar confirmación de contraseña' : 'Ver confirmación de contraseña'"
             tabindex="0"
           >
-            {{ showConfirmation() ? 'Hide' : 'Show' }}
+            {{ showConfirmation() ? 'Ocultar' : 'Ver' }}
           </button>
         </div>
         @if (passwordConfirmation?.invalid && (passwordConfirmation?.dirty || passwordConfirmation?.touched)) {
           <p id="confirmation-error" class="field-error" role="alert">
             @if (passwordConfirmation?.hasError('required')) {
-              Please confirm your password.
+              Por favor confirma tu contraseña.
             }
           </p>
         } @else if (hasPasswordMismatch) {
           <p id="confirmation-error" class="field-error" role="alert">
-            Passwords do not match.
+            Las contraseñas no coinciden.
           </p>
         }
       </div>
@@ -154,9 +154,9 @@
         >
           @if (isSubmitting()) {
             <span class="btn-spinner" aria-hidden="true"></span>
-            <span>Registrando... / Securing Account...</span>
+            <span>Registrando cuenta...</span>
           } @else {
-            <span>Registrar Cuenta / Create Account</span>
+            <span>Crear Cuenta en la Bóveda</span>
           }
         </button>
       </div>
@@ -165,7 +165,7 @@
     <footer class="signup-footer">
       <p class="footer-prompt">
         ¿Ya tienes una cuenta?
-        <a routerLink="/auth/login" class="link-action">Iniciar Sesión / Sign In</a>
+        <a routerLink="/auth/login" class="link-action">Iniciar sesión</a>
       </p>
     </footer>
   </div>

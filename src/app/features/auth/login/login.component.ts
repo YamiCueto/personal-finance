@@ -46,7 +46,7 @@ export class LoginComponent {
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/app';
         await this.router.navigateByUrl(returnUrl);
       } else {
-        this.errorMessage.set(result.error || 'Authentication failed. Please verify your credentials.');
+        this.errorMessage.set(result.error || 'Correo o contraseña incorrectos. Por favor verifica tus credenciales.');
       }
     } finally {
       this.isSubmitting.set(false);

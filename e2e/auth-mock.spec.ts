@@ -24,27 +24,27 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
   test('unauthenticated request to /app redirects to /auth/login with returnUrl parameter', async ({ page }) => {
     await page.goto('/app');
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
 
     await page.goto('/auth/login');
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
 
     await page.goto('/auth/signup');
     await expect(page).toHaveURL(/\/auth\/signup/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create Vault Account');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Crear Cuenta en la Bóveda|Create Vault Account/i);
   });
 
   test('login page renders accessible controls and enforces minimum touch targets', async ({ page }) => {
     await page.goto('/auth/login');
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
-    await expect(page.getByText('Financial Control System')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
+    await expect(page.getByText(/Control Financiero Personal|Financial Control System/i)).toBeVisible();
 
     const emailInput = page.locator('#login-email');
     const passwordInput = page.locator('#login-password');
-    const submitButton = page.getByRole('button', { name: /sign in to vault/i });
-    const toggleButton = page.getByRole('button', { name: /show password/i });
+    const submitButton = page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i });
+    const toggleButton = page.getByRole('button', { name: /ver contraseña|mostrar contraseña|show password/i });
 
     await expect(emailInput).toBeVisible();
     await expect(passwordInput).toBeVisible();
@@ -59,7 +59,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(passwordInput).toHaveAttribute('type', 'password');
     await toggleButton.click();
     await expect(passwordInput).toHaveAttribute('type', 'text');
-    await expect(page.getByRole('button', { name: /hide password/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /ocultar contraseña|hide password/i })).toBeVisible();
 
     const { scrollWidth, clientWidth } = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
@@ -71,24 +71,24 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
   test('signup page validates invalid email, minimum length, and weak password requirements', async ({ page }) => {
     await page.goto('/auth/signup');
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create Vault Account');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Crear Cuenta en la Bóveda|Create Vault Account/i);
 
     const emailInput = page.locator('#email');
     const passwordInput = page.locator('#password');
-    const submitButton = page.getByRole('button', { name: /create account/i });
+    const submitButton = page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i });
 
     await emailInput.fill('invalid-email-format');
     await emailInput.blur();
-    await expect(page.locator('#email-error')).toContainText('Please enter a valid email format.');
+    await expect(page.locator('#email-error')).toContainText(/Ingresa un formato de correo electrónico válido|Please enter a valid email format/i);
 
     await passwordInput.fill('short');
     await passwordInput.blur();
-    await expect(page.locator('#password-error')).toContainText('Password must be at least 8 characters long.');
+    await expect(page.locator('#password-error')).toContainText(/La contraseña debe tener al menos 8 caracteres|Password must be at least 8 characters long/i);
 
     await passwordInput.fill('lettersonlyhere');
     await passwordInput.blur();
     await expect(page.locator('#password-error')).toContainText(
-      'Password must include at least one letter and one number.'
+      /La contraseña debe incluir al menos una letra y un número|Password must include at least one letter and one number/i
     );
 
     await expect(submitButton).toBeDisabled();
@@ -102,21 +102,21 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.locator('#passwordConfirmation').fill('DifferentPass456!');
     await page.locator('#passwordConfirmation').blur();
 
-    await expect(page.locator('#confirmation-error')).toContainText('Passwords do not match.');
-    await expect(page.getByRole('button', { name: /create account/i })).toBeDisabled();
+    await expect(page.locator('#confirmation-error')).toContainText(/Las contraseñas no coinciden|Passwords do not match/i);
+    await expect(page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i })).toBeDisabled();
   });
 
   test('user can navigate smoothly between login and signup pages', async ({ page }) => {
     await page.goto('/auth/login');
     await expect(page).toHaveURL(/\/auth\/login/);
 
-    await page.getByRole('link', { name: /create vault account/i }).click();
+    await page.getByRole('link', { name: /crear cuenta en la bóveda|create vault account/i }).click();
     await expect(page).toHaveURL(/\/auth\/signup/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create Vault Account');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Crear Cuenta en la Bóveda|Create Vault Account/i);
 
-    await page.getByRole('link', { name: /sign in/i }).click();
+    await page.getByRole('link', { name: /iniciar sesión|ingresar|sign in/i }).click();
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
   });
 
   test('invalid login produces a normalized error banner without crashing', async ({ page }) => {
@@ -126,13 +126,13 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.locator('#login-email').fill('wrong-user@test.invalid');
     await page.locator('#login-password').fill('WrongPassword999!');
 
-    const submitButton = page.getByRole('button', { name: /sign in to vault/i });
+    const submitButton = page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i });
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     const alert = page.locator('.alert.alert-error');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/Invalid email or password|Authentication Failed/i);
+    await expect(alert).toContainText(/Correo o contraseña incorrectos|Invalid email or password|Authentication Failed/i);
 
     await expect(page.locator('#login-email')).toBeEnabled();
     await expect(page.locator('#login-password')).toBeEnabled();
@@ -144,7 +144,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.goto('/auth/login');
     await page.locator('#login-email').fill(MOCK_USER_A.email);
     await page.locator('#login-password').fill('ValidPassword123!');
-    await page.getByRole('button', { name: /sign in to vault/i }).click();
+    await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     await expect(page).toHaveURL(/\/app/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Authenticated Session Verified');
@@ -159,11 +159,11 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.locator('#email').fill(MOCK_USER_A.email);
     await page.locator('#password').fill('StrongPass123!');
     await page.locator('#passwordConfirmation').fill('StrongPass123!');
-    await page.getByRole('button', { name: /create account/i }).click();
+    await page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i }).click();
 
     const alert = page.locator('.alert.alert-success');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/Account registered successfully/i);
+    await expect(alert).toContainText(/registrada exitosamente|Account registered successfully/i);
   });
 
   test('successful signup requiring email confirmation displays verification notice', async ({ page }) => {
@@ -173,11 +173,11 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.locator('#email').fill(MOCK_USER_A.email);
     await page.locator('#password').fill('StrongPass123!');
     await page.locator('#passwordConfirmation').fill('StrongPass123!');
-    await page.getByRole('button', { name: /create account/i }).click();
+    await page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i }).click();
 
     const alert = page.locator('.alert.alert-success');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/confirmation email has been dispatched/i);
+    await expect(alert).toContainText(/correo de confirmación|confirmation email has been dispatched/i);
   });
 
   test('signup failure with existing email displays normalized duplicate error', async ({ page }) => {
@@ -187,11 +187,11 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.locator('#email').fill('existing-user@example.com');
     await page.locator('#password').fill('StrongPass123!');
     await page.locator('#passwordConfirmation').fill('StrongPass123!');
-    await page.getByRole('button', { name: /create account/i }).click();
+    await page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i }).click();
 
     const alert = page.locator('.alert.alert-error');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/already exists/i);
+    await expect(alert).toContainText(/Ya existe una cuenta|already exists/i);
   });
 
   test('session persistence restores authenticated identity across page reload', async ({ page }) => {
@@ -211,7 +211,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
 
     await page.goto('/app');
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
   });
 
   test('sign out cleans active session and locks protected routes', async ({ page }) => {
@@ -246,7 +246,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
 
     await page.locator('#login-email').fill(MOCK_USER_A.email);
     await page.locator('#login-password').fill('ValidPassword123!');
-    await page.getByRole('button', { name: /sign in to vault/i }).click();
+    await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     await expect(page).toHaveURL('/app?view=portfolio-allocations');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Authenticated Session Verified');
@@ -258,11 +258,11 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.goto('/auth/login');
     await page.locator('#login-email').fill('network-error@test.vault');
     await page.locator('#login-password').fill('ValidPassword123!');
-    await page.getByRole('button', { name: /sign in to vault/i }).click();
+    await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     const alert = page.locator('.alert.alert-error');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/Unable to connect to authentication service|failed/i);
+    await expect(alert).toContainText(/No fue posible conectar|Unable to connect to authentication service|failed/i);
   });
 
   test('multi-tenant session isolation between User A and User B across concurrent browser contexts', async ({
@@ -284,14 +284,14 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
       await pageA.goto('/auth/login');
       await pageA.locator('#login-email').fill(MOCK_USER_A.email);
       await pageA.locator('#login-password').fill('PassAlpha123!');
-      await pageA.getByRole('button', { name: /sign in to vault/i }).click();
+      await pageA.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
       await expect(pageA).toHaveURL(/\/app/);
       await expect(pageA.locator('[data-testid="user-email"]')).toContainText(MOCK_USER_A.email);
 
       await pageB.goto('/auth/login');
       await pageB.locator('#login-email').fill(MOCK_USER_B.email);
       await pageB.locator('#login-password').fill('PassBeta456!');
-      await pageB.getByRole('button', { name: /sign in to vault/i }).click();
+      await pageB.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
       await expect(pageB).toHaveURL(/\/app/);
       await expect(pageB.locator('[data-testid="user-email"]')).toContainText(MOCK_USER_B.email);
 
@@ -318,10 +318,10 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
 
   test('forgot password link navigates from login to /auth/forgot-password', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.getByRole('link', { name: /forgot your password/i }).click();
+    await page.getByRole('link', { name: /¿Olvidaste tu contraseña\?|forgot your password/i }).click();
 
     await expect(page).toHaveURL(/\/auth\/forgot-password/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Reset Vault Password');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Recuperar Contraseña|Reset Vault Password/i);
   });
 
   test('forgot password form dispatches recovery request and displays polite notice', async ({ page }) => {
@@ -329,11 +329,11 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
 
     await page.goto('/auth/forgot-password');
     await page.locator('#recovery-email').fill('operative@personalfinance.vault');
-    await page.getByRole('button', { name: /send recovery link/i }).click();
+    await page.getByRole('button', { name: /enviar enlace de recuperación|send recovery link/i }).click();
 
     const alert = page.locator('.alert.alert-success');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/password recovery instructions have been dispatched/i);
+    await expect(alert).toContainText(/instrucciones de recuperación|password recovery instructions have been dispatched/i);
   });
 
   test('forgot password rate limit error displays rate limit warning banner', async ({ page }) => {
@@ -341,11 +341,11 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
 
     await page.goto('/auth/forgot-password');
     await page.locator('#recovery-email').fill('operative@personalfinance.vault');
-    await page.getByRole('button', { name: /send recovery link/i }).click();
+    await page.getByRole('button', { name: /enviar enlace de recuperación|send recovery link/i }).click();
 
     const alert = page.locator('.alert.alert-error');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/rate limit/i);
+    await expect(alert).toContainText(/Límite de solicitudes|rate limit/i);
   });
 
   test('reset password displays expired link warning when opened without recovery session', async ({ page }) => {
@@ -353,8 +353,8 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
 
     const alert = page.locator('.alert.alert-error');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/invalid or has expired/i);
-    await expect(page.getByRole('link', { name: /request new recovery link/i })).toBeVisible();
+    await expect(alert).toContainText(/inválido o ha expirado|invalid or has expired/i);
+    await expect(page.getByRole('link', { name: /solicitar nuevo enlace|request new recovery link/i })).toBeVisible();
   });
 
   test('reset password updates password successfully when authenticated via recovery session', async ({ page }) => {
@@ -362,15 +362,15 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await mockPasswordUpdateSuccess(page, MOCK_USER_A);
 
     await page.goto('/auth/reset-password');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Set New Password');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Establecer Nueva Contraseña|Set New Password/i);
 
     await page.locator('#new-password').fill('UpdatedPass123!');
     await page.locator('#new-password-confirmation').fill('UpdatedPass123!');
-    await page.getByRole('button', { name: /update master password/i }).click();
+    await page.getByRole('button', { name: /actualizar contraseña|update master password/i }).click();
 
     const alert = page.locator('.alert.alert-success');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/updated successfully/i);
+    await expect(alert).toContainText(/actualizada exitosamente|updated successfully/i);
   });
 
   test('zero horizontal overflow across all core viewport configurations including authenticated app shell', async ({ page }) => {

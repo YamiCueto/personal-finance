@@ -56,6 +56,6 @@ describe('ResetPasswordComponent', () => {
     fixture.detectChanges();
 
     expect(mockAuthService.updateUserPassword).toHaveBeenCalledWith('StrongPassword123!');
-    expect(component.successMessage()).toContain('Master vault password updated successfully');
+    expect(component.successMessage()).toContain('actualizada exitosamente');
   });
 });

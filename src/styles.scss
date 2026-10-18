@@ -250,7 +250,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px));
 }
 
 .modal-card {
@@ -259,7 +259,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--rlg);
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   padding: 1.5rem;
   display: flex;

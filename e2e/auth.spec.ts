@@ -8,17 +8,17 @@ test.describe('Authentication Foundation & Route Protection', () => {
     // Unauthenticated request to protected route
     await page.goto('/app');
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
 
     // Guest can access login
     await page.goto('/auth/login');
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
 
     // Guest can access signup
     await page.goto('/auth/signup');
     await expect(page).toHaveURL(/\/auth\/signup/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create Vault Account');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Crear Cuenta en la Bóveda|Create Vault Account/i);
   });
 
   // Scenario 2: Login page renders and is usable at mobile viewport
@@ -26,14 +26,14 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await page.goto('/auth/login');
 
     // Heading and identity branding
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
-    await expect(page.getByText('Financial Control System')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
+    await expect(page.getByText(/Control Financiero Personal|Financial Control System/i)).toBeVisible();
 
     // Form inputs and controls
     const emailInput = page.locator('#login-email');
     const passwordInput = page.locator('#login-password');
-    const submitButton = page.getByRole('button', { name: /sign in to vault/i });
-    const toggleButton = page.getByRole('button', { name: /show password/i });
+    const submitButton = page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i });
+    const toggleButton = page.getByRole('button', { name: /ver contraseña|mostrar contraseña|show password/i });
 
     await expect(emailInput).toBeVisible();
     await expect(passwordInput).toBeVisible();
@@ -50,7 +50,7 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await expect(passwordInput).toHaveAttribute('type', 'password');
     await toggleButton.click();
     await expect(passwordInput).toHaveAttribute('type', 'text');
-    await expect(page.getByRole('button', { name: /hide password/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /ocultar contraseña|hide password/i })).toBeVisible();
 
     // Verify no horizontal overflow
     const { scrollWidth, clientWidth } = await page.evaluate(() => ({
@@ -66,27 +66,27 @@ test.describe('Authentication Foundation & Route Protection', () => {
   }) => {
     await page.goto('/auth/signup');
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create Vault Account');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Crear Cuenta en la Bóveda|Create Vault Account/i);
 
     const emailInput = page.locator('#email');
     const passwordInput = page.locator('#password');
-    const submitButton = page.getByRole('button', { name: /create account/i });
+    const submitButton = page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i });
 
     // Invalid email triggers format error
     await emailInput.fill('invalid-email-format');
     await emailInput.blur();
-    await expect(page.locator('#email-error')).toContainText('Please enter a valid email format.');
+    await expect(page.locator('#email-error')).toContainText(/Ingresa un formato de correo electrónico válido|Please enter a valid email format/i);
 
     // Short password triggers length error
     await passwordInput.fill('short');
     await passwordInput.blur();
-    await expect(page.locator('#password-error')).toContainText('Password must be at least 8 characters long.');
+    await expect(page.locator('#password-error')).toContainText(/La contraseña debe tener al menos 8 caracteres|Password must be at least 8 characters long/i);
 
     // Weak password without numbers triggers strength error
     await passwordInput.fill('lettersonlyhere');
     await passwordInput.blur();
     await expect(page.locator('#password-error')).toContainText(
-      'Password must include at least one letter and one number.'
+      /La contraseña debe incluir al menos una letra y un número|Password must include at least one letter and one number/i
     );
 
     await expect(submitButton).toBeDisabled();
@@ -101,8 +101,8 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await page.locator('#passwordConfirmation').fill('DifferentPass456!');
     await page.locator('#passwordConfirmation').blur();
 
-    await expect(page.locator('#confirmation-error')).toContainText('Passwords do not match.');
-    await expect(page.getByRole('button', { name: /create account/i })).toBeDisabled();
+    await expect(page.locator('#confirmation-error')).toContainText(/Las contraseñas no coinciden|Passwords do not match/i);
+    await expect(page.getByRole('button', { name: /crear cuenta en la bóveda|create account/i })).toBeDisabled();
   });
 
   // Scenario 5: Navigation between login and signup
@@ -111,14 +111,14 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await expect(page).toHaveURL(/\/auth\/login/);
 
     // Click link to signup
-    await page.getByRole('link', { name: /create vault account/i }).click();
+    await page.getByRole('link', { name: /crear cuenta en la bóveda|create vault account/i }).click();
     await expect(page).toHaveURL(/\/auth\/signup/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create Vault Account');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Crear Cuenta en la Bóveda|Create Vault Account/i);
 
     // Click link back to login
-    await page.getByRole('link', { name: /sign in/i }).click();
+    await page.getByRole('link', { name: /iniciar sesión|ingresar|sign in/i }).click();
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Access Vault');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Acceso a la Bóveda|Access Vault/i);
   });
 
   // Scenario 6: Invalid login produces a controlled error state
@@ -128,14 +128,14 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await page.locator('#login-email').fill('nonexistent-vault-user@test.invalid');
     await page.locator('#login-password').fill('WrongPassword999!');
 
-    const submitButton = page.getByRole('button', { name: /sign in to vault/i });
+    const submitButton = page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i });
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     // Verify error banner appears with role="alert"
     const alert = page.locator('.alert.alert-error');
     await expect(alert).toBeVisible({ timeout: 10000 });
-    await expect(alert).toContainText(/Invalid email or password|Authentication Failed/i);
+    await expect(alert).toContainText(/Correo o contraseña incorrectos|Invalid email or password|Authentication Failed/i);
 
     // Verify form remains accessible and interactive
     await expect(page.locator('#login-email')).toBeEnabled();
@@ -157,7 +157,7 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await page.goto('/auth/login');
     await page.locator('#login-email').fill(userAEmail!);
     await page.locator('#login-password').fill(userAPassword!);
-    await page.getByRole('button', { name: /sign in to vault/i }).click();
+    await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     // Verify redirection to /app shell with User A identity
     await expect(page).toHaveURL(/\/app/);
@@ -194,7 +194,7 @@ test.describe('Authentication Foundation & Route Protection', () => {
     await page.goto('/auth/login');
     await page.locator('#login-email').fill(userBEmail!);
     await page.locator('#login-password').fill(userBPassword!);
-    await page.getByRole('button', { name: /sign in to vault/i }).click();
+    await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     // Verify redirection to /app shell with User B identity
     await expect(page).toHaveURL(/\/app/);
@@ -236,7 +236,7 @@ test.describe('Authentication Foundation & Route Protection', () => {
       await pageA.goto('/auth/login');
       await pageA.locator('#login-email').fill(userAEmail!);
       await pageA.locator('#login-password').fill(userAPassword!);
-      await pageA.getByRole('button', { name: /sign in to vault/i }).click();
+      await pageA.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
       await expect(pageA).toHaveURL(/\/app/);
       await expect(pageA.locator('[data-testid="user-email"]')).toContainText(userAEmail!);
 
@@ -244,7 +244,7 @@ test.describe('Authentication Foundation & Route Protection', () => {
       await pageB.goto('/auth/login');
       await pageB.locator('#login-email').fill(userBEmail!);
       await pageB.locator('#login-password').fill(userBPassword!);
-      await pageB.getByRole('button', { name: /sign in to vault/i }).click();
+      await pageB.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
       await expect(pageB).toHaveURL(/\/app/);
       await expect(pageB.locator('[data-testid="user-email"]')).toContainText(userBEmail!);
 
@@ -290,7 +290,7 @@ test.describe('Authentication Foundation & Route Protection', () => {
     // Log in
     await page.locator('#login-email').fill(userAEmail!);
     await page.locator('#login-password').fill(userAPassword!);
-    await page.getByRole('button', { name: /sign in to vault/i }).click();
+    await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     // Verify redirected directly to original deep URL without redirect loops
     await expect(page).toHaveURL('/app?view=vault-summary');

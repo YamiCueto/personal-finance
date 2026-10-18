@@ -143,13 +143,11 @@
   <div class="app-main-wrapper">
     <!-- Topbar Superior -->
     <header class="app-topbar" role="banner">
-      <div class="topbar-left">
-        <div class="topbar-brand-row">
-          <span class="topbar-brand-title">personal<em>.</em></span>
-          @if (financialFacade.isDemoMode()) {
-            <span class="demo-badge-pill" data-testid="demo-badge">MODO DEMO LOCAL</span>
-          }
-        </div>
+      <div class="topbar-brand-row">
+        <span class="topbar-brand-title">personal<em>.</em></span>
+        @if (financialFacade.isDemoMode()) {
+          <span class="demo-badge-pill" data-testid="demo-badge">MODO DEMO LOCAL</span>
+        }
       </div>
 
       <!-- Acciones de Cabecera (Botones Rápidos) -->
@@ -166,19 +164,19 @@
           <app-icon name="plus" [size]="14" />
           <span class="quick-text">Cuenta</span>
         </button>
-
-        <!-- Botón de logout -->
-        <button
-          type="button"
-          class="btn-topbar-signout"
-          (click)="onSignOut()"
-          title="Cerrar Sesión"
-          aria-label="Cerrar sesión de la bóveda"
-          data-testid="signout-button"
-        >
-          <app-icon name="logout" [size]="16" />
-        </button>
       </div>
+
+      <!-- Botón de logout -->
+      <button
+        type="button"
+        class="btn-topbar-signout"
+        (click)="onSignOut()"
+        title="Cerrar Sesión"
+        aria-label="Cerrar sesión de la bóveda"
+        data-testid="signout-button"
+      >
+        <app-icon name="logout" [size]="16" />
+      </button>
     </header>
 
     <!-- Hidden compatibility text for base E2E verification -->

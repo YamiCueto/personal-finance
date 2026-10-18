@@ -72,7 +72,7 @@ export class ResetPasswordComponent implements OnInit {
       if (!hasRecoveryTokens) {
         this.isRecoverySessionValid.set(false);
         this.errorMessage.set(
-          'Recovery link is invalid or has expired. Please request a new password recovery link.'
+          'El enlace de recuperación es inválido o ha expirado. Por favor solicita un nuevo enlace.'
         );
       }
     }
@@ -102,14 +102,14 @@ export class ResetPasswordComponent implements OnInit {
       const result = await this.authService.updateUserPassword(password);
 
       if (result.success) {
-        this.successMessage.set('Master vault password updated successfully! Redirecting to sign in...');
+        this.successMessage.set('¡Contraseña maestra actualizada exitosamente! Redirigiendo al inicio de sesión...');
         this.resetForm.reset();
         setTimeout(async () => {
           await this.authService.signOut();
           await this.router.navigate(['/auth/login']);
         }, 2000);
       } else {
-        this.errorMessage.set(result.error || 'Password update failed. Please try requesting a new recovery link.');
+        this.errorMessage.set(result.error || 'No fue posible actualizar la contraseña. Por favor intenta solicitar un nuevo enlace.');
       }
     } finally {
       this.isSubmitting.set(false);

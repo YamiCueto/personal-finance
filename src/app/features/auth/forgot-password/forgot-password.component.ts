@@ -38,11 +38,11 @@ export class ForgotPasswordComponent {
 
       if (result.success) {
         this.successMessage.set(
-          'If an account exists with this email address, password recovery instructions have been dispatched. Please inspect your inbox and spam folder.'
+          'Si existe una cuenta asociada a este correo, se han enviado las instrucciones de recuperación. Por favor revisa tu bandeja de entrada o spam.'
         );
         this.forgotForm.reset();
       } else {
-        this.errorMessage.set(result.error || 'Password reset request failed. Please try again.');
+        this.errorMessage.set(result.error || 'La solicitud de recuperación falló. Por favor intenta nuevamente.');
       }
     } finally {
       this.isSubmitting.set(false);

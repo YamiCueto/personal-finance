@@ -94,7 +94,7 @@ describe('SignupComponent', () => {
     await component.onSubmit();
 
     expect(mockAuthService.signUp).toHaveBeenCalledWith('owner@example.com', 'SecurePassword1');
-    expect(component.successMessage()).toContain('confirmation email has been dispatched');
+    expect(component.successMessage()).toContain('correo de confirmación');
     expect(component.errorMessage()).toBeNull();
   });
 
@@ -104,7 +104,7 @@ describe('SignupComponent', () => {
       user: null,
       session: null,
       requiresEmailConfirmation: false,
-      error: 'An account with this email address already exists.',
+      error: 'Ya existe una cuenta registrada con este correo electrónico.',
     });
 
     component.signupForm.setValue({
@@ -115,7 +115,7 @@ describe('SignupComponent', () => {
 
     await component.onSubmit();
 
-    expect(component.errorMessage()).toContain('already exists');
+    expect(component.errorMessage()).toContain('Ya existe una cuenta');
     expect(component.successMessage()).toBeNull();
   });
 

@@ -46,7 +46,7 @@ describe('ForgotPasswordComponent', () => {
     fixture.detectChanges();
 
     expect(mockAuthService.resetPasswordForEmail).toHaveBeenCalledWith('user@example.com');
-    expect(component.successMessage()).toContain('password recovery instructions have been dispatched');
+    expect(component.successMessage()).toContain('instrucciones de recuperación');
     expect(component.errorMessage()).toBeNull();
   });
 

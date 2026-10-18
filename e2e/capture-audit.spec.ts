@@ -205,4 +205,47 @@ test.describe('Visual Audit & Evidence Capture', () => {
 
     await deskCtx.close();
   });
+
+  test('capture PWA iOS visual polish evidence (Header Grid & Spanish Auth)', async ({ browser }) => {
+    const outDir = 'docs/sprints/evidence';
+
+    // 1. Mobile 390x844 (iPhone 12/13/14)
+    const mobileCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const mobilePage = await mobileCtx.newPage();
+    await setupSupabaseMocks(mobilePage);
+
+    // Login screen in Spanish
+    await mobilePage.goto('/auth/login');
+    await mobilePage.waitForTimeout(400);
+    await mobilePage.screenshot({ path: `${outDir}/login-after-spanish-390.png`, fullPage: false });
+
+    // Signup screen in Spanish
+    await mobilePage.goto('/auth/signup');
+    await mobilePage.waitForTimeout(400);
+    await mobilePage.screenshot({ path: `${outDir}/signup-after-spanish-390.png`, fullPage: false });
+
+    // Header mobile grid with 2 levels & no overflow
+    await injectAuthenticatedSession(mobilePage, MOCK_USER_A);
+    await mobilePage.goto('/app');
+    await mobilePage.waitForTimeout(500);
+
+    const topbar = mobilePage.locator('.app-topbar');
+    await topbar.screenshot({ path: `${outDir}/header-after-mobile-grid-390.png` });
+    await mobilePage.screenshot({ path: `${outDir}/app-shell-after-mobile-390.png`, fullPage: false });
+
+    await mobileCtx.close();
+
+    // 2. Desktop 1440x900 Header
+    const deskCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const deskPage = await deskCtx.newPage();
+    await setupSupabaseMocks(deskPage);
+    await injectAuthenticatedSession(deskPage, MOCK_USER_A);
+    await deskPage.goto('/app');
+    await deskPage.waitForTimeout(500);
+
+    const deskTopbar = deskPage.locator('.app-topbar');
+    await deskTopbar.screenshot({ path: `${outDir}/header-desktop-1440.png` });
+
+    await deskCtx.close();
+  });
 });

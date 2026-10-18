@@ -43,24 +43,15 @@
       display: none;
     }
 
-    .brand-container {
-      justify-content: center;
-    }
-
-    .nav-link {
-      justify-content: center;
-      padding: 0.75rem;
-    }
-
+    .brand-container,
+    .nav-link,
     .sidebar-demo-badge {
       justify-content: center;
-      padding: 0.35rem;
     }
 
-    .sidebar-actions {
-      flex-direction: column;
-      align-items: center;
-    }
+    .nav-link { padding: 0.75rem; }
+    .sidebar-demo-badge { padding: 0.35rem; }
+    .sidebar-actions { flex-direction: column; align-items: center; }
   }
 }
 
@@ -71,24 +62,24 @@
   gap: 1rem;
 }
 
+.brand-wordmark,
+.topbar-brand-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--t1);
+
+  em {
+    color: var(--amber);
+    font-style: normal;
+  }
+}
+
 .brand-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  .brand-wordmark,
-  .topbar-brand-title {
-    font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--t1);
-
-    em {
-      color: var(--amber);
-      font-style: normal;
-    }
-  }
 
   .sidebar-toggle-btn {
     width: 28px;
@@ -138,52 +129,37 @@
   padding: 0 0.75rem;
   flex: 1;
   overflow-y: auto;
+}
 
-  .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.7rem 0.85rem;
-    min-height: var(--touch);
-    border-radius: var(--rsm);
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  min-height: var(--touch);
+  border-radius: var(--rsm);
+  color: var(--t2);
+  background: transparent;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-align: left;
+  width: 100%;
+
+  app-icon { color: inherit; }
+  &:hover { background-color: var(--s2); color: var(--t1); }
+  &.active { background-color: var(--amber-bg); color: var(--amber); font-weight: 700; }
+
+  .nav-text { flex: 1; white-space: nowrap; }
+  .nav-counter {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    background-color: var(--s2);
     color: var(--t2);
-    background: transparent;
-    border: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
-    text-align: left;
-    width: 100%;
-
-    app-icon {
-      color: inherit;
-    }
-
-    &:hover {
-      background-color: var(--s2);
-      color: var(--t1);
-    }
-
-    &.active {
-      background-color: var(--amber-bg);
-      color: var(--amber);
-      font-weight: 700;
-    }
-
-    .nav-text {
-      flex: 1;
-      white-space: nowrap;
-    }
-
-    .nav-counter {
-      font-size: 0.7rem;
-      font-family: var(--font-mono);
-      padding: 0.15rem 0.45rem;
-      border-radius: 9999px;
-      background-color: var(--s2);
-      color: var(--t2);
-    }
   }
 }
 
@@ -233,34 +209,34 @@
 .sidebar-actions {
   display: flex;
   gap: 0.5rem;
+}
 
-  .btn-sidebar-reset,
-  .btn-sidebar-signout {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--s2);
-    border: 1px solid var(--bd);
-    border-radius: 6px;
-    color: var(--t2);
-    cursor: pointer;
-  }
+.btn-sidebar-reset,
+.btn-sidebar-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--s2);
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  color: var(--t2);
+  cursor: pointer;
+}
 
-  .btn-sidebar-reset {
-    flex: 1;
-    gap: 0.35rem;
-    padding: 0.45rem 0.65rem;
-    font-size: 0.75rem;
+.btn-sidebar-reset {
+  flex: 1;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
 
-    &:hover { color: var(--amber); border-color: var(--amber-dim); }
-  }
+  &:hover { color: var(--amber); border-color: var(--amber-dim); }
+}
 
-  .btn-sidebar-signout {
-    width: 32px;
-    height: 32px;
+.btn-sidebar-signout {
+  width: 32px;
+  height: 32px;
 
-    &:hover { color: var(--red); border-color: rgba(239, 68, 68, 0.3); }
-  }
+  &:hover { color: var(--red); border-color: rgba(239, 68, 68, 0.3); }
 }
 
 // ── 2. WRAPPER PRINCIPAL Y TOPBAR ────────────────────────────────────
@@ -281,10 +257,14 @@
 }
 
 .app-topbar {
-  display: flex;
+  display: grid;
+  grid-template-areas:
+    "brand signout"
+    "actions actions";
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1rem;
+  gap: 0.65rem 0.5rem;
+  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 1rem 0.75rem;
   background-color: var(--s1);
   border-bottom: 1px solid var(--bd);
   position: sticky;
@@ -292,10 +272,14 @@
   z-index: 90;
 
   @media (min-width: 768px) {
+    display: flex;
+    justify-content: space-between;
     padding: 1rem 1.75rem;
+    gap: 1rem;
   }
 
   .topbar-brand-row {
+    grid-area: brand;
     display: flex;
     align-items: center;
     gap: 0.65rem;
@@ -315,50 +299,70 @@
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
       letter-spacing: 0.04em;
-      display: inline-flex;
-      align-items: center;
+      white-space: nowrap;
     }
   }
 
-  .topbar-actions {
-    display: flex;
+  .btn-quick-action,
+  .btn-topbar-signout {
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-left: auto;
+    justify-content: center;
+    background-color: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rsm);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
 
-    .btn-quick-action,
-    .btn-topbar-signout {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 36px;
-      background-color: var(--s2);
-      border: 1px solid var(--bd);
-      border-radius: var(--rsm);
-      cursor: pointer;
+  .topbar-actions {
+    grid-area: actions;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+
+    @media (min-width: 768px) {
+      display: flex;
+      margin-left: auto;
     }
 
     .btn-quick-action {
       gap: 0.35rem;
-      padding: 0.45rem 0.75rem;
+      height: 44px;
+      padding: 0 0.5rem;
       color: var(--t1);
       font-size: 0.8rem;
       font-weight: 600;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
 
       &:hover {
         background-color: var(--s3);
         border-color: var(--amber-dim);
       }
+
+      @media (min-width: 768px) {
+        height: 36px;
+        padding: 0.45rem 0.85rem;
+      }
+    }
+  }
+
+  .btn-topbar-signout {
+    grid-area: signout;
+    width: 44px;
+    height: 44px;
+    color: var(--t2);
+
+    &:hover {
+      color: var(--red);
+      border-color: rgba(239, 68, 68, 0.4);
     }
 
-    .btn-topbar-signout {
+    @media (min-width: 768px) {
       width: 36px;
-      color: var(--t2);
-
-      &:hover {
-        color: var(--red);
-        border-color: rgba(239, 68, 68, 0.4);
-      }
+      height: 36px;
     }
   }
 }
@@ -457,15 +461,19 @@
     border-color: var(--amber-dim);
   }
 
+  .kpi-label,
+  .kpi-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .kpi-label {
     font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--t2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .kpi-value {
@@ -475,9 +483,6 @@
     color: var(--t1);
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 
     @media (min-width: 440px) {
       font-size: 1.15rem;
@@ -529,23 +534,23 @@
     flex-direction: column;
     flex: 1 1 120px;
     gap: 0.15rem;
+  }
 
-    .ribbon-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      color: var(--t3);
-    }
+  .ribbon-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--t3);
+  }
 
-    .ribbon-val {
-      font-family: var(--font-mono);
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--t1);
+  .ribbon-val {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--t1);
 
-      &.paid { color: var(--green); }
-      &.pending { color: var(--red); }
-    }
+    &.paid { color: var(--green); }
+    &.pending { color: var(--red); }
   }
 }
 
@@ -652,55 +657,53 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
 
-    .sheet-title {
-      font-family: var(--font-display);
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--t1);
-    }
+  .sheet-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--t1);
+  }
 
-    .sheet-close {
-      background: transparent;
-      border: none;
-      color: var(--t2);
-      font-size: 1.25rem;
-      cursor: pointer;
-    }
+  .sheet-close {
+    background: transparent;
+    border: none;
+    color: var(--t2);
+    font-size: 1.25rem;
+    cursor: pointer;
   }
 
   .more-options-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
+  }
 
-    .more-option-card {
+  .more-option-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    background-color: var(--s2);
+    border: 1px solid var(--bd2);
+    border-radius: var(--rsm);
+    color: var(--t1);
+    cursor: pointer;
+    text-align: left;
+
+    app-icon { color: var(--amber); }
+
+    .opt-text {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.85rem;
-      background-color: var(--s2);
-      border: 1px solid var(--bd2);
-      border-radius: var(--rsm);
-      color: var(--t1);
-      cursor: pointer;
-      text-align: left;
+      flex-direction: column;
+      strong { font-size: 0.85rem; }
+      span { font-size: 0.7rem; color: var(--t3); }
+    }
 
-      app-icon {
-        color: var(--amber);
-      }
-
-      .opt-text {
-        display: flex;
-        flex-direction: column;
-        strong { font-size: 0.85rem; }
-        span { font-size: 0.7rem; color: var(--t3); }
-      }
-
-      &.active {
-        border-color: var(--amber);
-        background-color: var(--amber-bg);
-      }
+    &.active {
+      border-color: var(--amber);
+      background-color: var(--amber-bg);
     }
   }
 }

@@ -74,7 +74,7 @@ describe('AuthService', () => {
     const result = await service.signUp('existing@example.com', 'SecureP@ss123');
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('already exists');
+    expect(result.error).toContain('Ya existe una cuenta');
   });
 
   it('should handle successful login with password', async () => {
@@ -101,7 +101,7 @@ describe('AuthService', () => {
     const result = await service.signInWithPassword('owner@example.com', 'WrongPass1');
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Invalid email or password');
+    expect(result.error).toContain('Correo o contraseña incorrectos');
     expect(service.isAuthenticated()).toBe(false);
   });
 
