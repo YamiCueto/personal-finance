@@ -464,7 +464,7 @@ BEGIN
 END;
 $$;
 
--- 6. NUEVA RPC: create_credit_card_purchase (atómica: INSERT compra + UPDATE cupo)
+-- 6. NUEVA RPC: create_credit_card_purchase (atómica: INSERT compra + UPDATE cupo + idempotencia)
 CREATE OR REPLACE FUNCTION public.create_credit_card_purchase(
     p_user_id UUID,
     p_credit_card_id UUID,
@@ -472,7 +472,8 @@ CREATE OR REPLACE FUNCTION public.create_credit_card_purchase(
     p_amount NUMERIC(15, 2),
     p_total_installments INTEGER,
     p_interest_rate_monthly NUMERIC(7, 4) DEFAULT NULL,
-    p_purchase_date DATE DEFAULT CURRENT_DATE
+    p_purchase_date DATE DEFAULT CURRENT_DATE,
+    p_idempotency_key VARCHAR(100) DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -481,6 +482,7 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_caller UUID;
+    v_existing RECORD;
     v_card RECORD;
     v_purchase_id UUID;
     v_rate NUMERIC(7, 4);
@@ -503,6 +505,22 @@ BEGIN
     IF p_total_installments < 1 THEN RAISE EXCEPTION 'El número de cuotas debe ser como mínimo 1'; END IF;
     IF p_description IS NULL OR trim(p_description) = '' THEN RAISE EXCEPTION 'La descripción de la compra es obligatoria'; END IF;
 
+    IF p_idempotency_key IS NOT NULL THEN
+        SELECT id, original_amount, product_id INTO v_existing
+        FROM public.credit_card_purchases
+        WHERE user_id = p_user_id AND idempotency_key = p_idempotency_key;
+
+        IF v_existing.id IS NOT NULL THEN
+            IF v_existing.original_amount <> p_amount OR v_existing.product_id <> p_credit_card_id THEN
+                RAISE EXCEPTION 'Conflicto de idempotencia: la clave % ya fue utilizada con parámetros diferentes', p_idempotency_key;
+            END IF;
+            RETURN jsonb_build_object(
+                'success', true, 'is_replayed', true, 'purchase_id', v_existing.id,
+                'message', 'Operación idempotente: la compra ya había sido registrada'
+            );
+        END IF;
+    END IF;
+
     SELECT * INTO v_card FROM public.credit_products WHERE id = p_credit_card_id AND user_id = p_user_id FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Tarjeta de crédito no encontrada o no pertenece al usuario'; END IF;
     IF v_card.type <> 'CREDIT_CARD' THEN RAISE EXCEPTION 'El producto especificado no es una tarjeta de crédito'; END IF;
@@ -515,8 +533,8 @@ BEGIN
     v_monthly_capital := ROUND(p_amount / p_total_installments, 2);
     v_monthly_interest := CASE WHEN v_rate > 0 THEN ROUND(p_amount * (v_rate / 100.0), 2) ELSE 0.00 END;
 
-    INSERT INTO public.credit_card_purchases (user_id, product_id, purchase_date, description, original_amount, total_installments, remaining_installments, interest_rate_monthly, monthly_capital, monthly_interest, status)
-    VALUES (p_user_id, p_credit_card_id, p_purchase_date, trim(p_description), p_amount, p_total_installments, p_total_installments, v_rate, v_monthly_capital, v_monthly_interest, 'PENDING')
+    INSERT INTO public.credit_card_purchases (user_id, product_id, purchase_date, description, original_amount, total_installments, remaining_installments, interest_rate_monthly, monthly_capital, monthly_interest, status, idempotency_key)
+    VALUES (p_user_id, p_credit_card_id, p_purchase_date, trim(p_description), p_amount, p_total_installments, p_total_installments, v_rate, v_monthly_capital, v_monthly_interest, 'PENDING', p_idempotency_key)
     RETURNING id INTO v_purchase_id;
 
     v_new_used := COALESCE(v_card.used_credit_limit, 0) + p_amount;
@@ -529,38 +547,67 @@ BEGIN
         updated_at = timezone('utc'::text, now())
     WHERE id = p_credit_card_id;
 
-    INSERT INTO public.financial_audit_log (user_id, event_type, entity_type, entity_id, amount, payload)
-    VALUES (p_user_id, 'CREDIT_CARD_PURCHASE', 'credit_card_purchases', v_purchase_id, p_amount,
+    INSERT INTO public.financial_audit_log (user_id, event_type, entity_type, entity_id, amount, idempotency_key, payload)
+    VALUES (p_user_id, 'CREDIT_CARD_PURCHASE', 'credit_card_purchases', v_purchase_id, p_amount, p_idempotency_key,
         jsonb_build_object('credit_card_id', p_credit_card_id, 'description', p_description, 'installments', p_total_installments));
 
-    RETURN jsonb_build_object('success', true, 'purchase_id', v_purchase_id, 'monthly_capital', v_monthly_capital, 'monthly_interest', v_monthly_interest, 'new_available_limit', GREATEST(0.00, v_new_available));
+    RETURN jsonb_build_object('success', true, 'is_replayed', false, 'purchase_id', v_purchase_id, 'monthly_capital', v_monthly_capital, 'monthly_interest', v_monthly_interest, 'new_available_limit', GREATEST(0.00, v_new_available));
 END;
 $$;
 
 -- 7. CONSTRAINT UNIQUE para deduplicación de cuotas de crédito por período
 DO $$
+DECLARE
+    v_existing_def TEXT;
+    v_expected_def TEXT := 'CREATE UNIQUE INDEX uq_period_obligation_credit_period ON public.period_obligations USING btree (user_id, credit_product_id, period_year, period_month) WHERE (credit_product_id IS NOT NULL)';
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_period_obligation_credit_period') THEN
+    SELECT indexdef INTO v_existing_def
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND tablename = 'period_obligations'
+      AND indexname = 'uq_period_obligation_credit_period';
+
+    IF v_existing_def IS NULL THEN
         CREATE UNIQUE INDEX uq_period_obligation_credit_period
         ON public.period_obligations(user_id, credit_product_id, period_year, period_month)
         WHERE credit_product_id IS NOT NULL;
+        RAISE NOTICE 'Índice uq_period_obligation_credit_period creado.';
+    ELSE
+        RAISE NOTICE 'Índice uq_period_obligation_credit_period ya existe — omitiendo creación.';
     END IF;
 END $$;
 
--- 8. PERMISOS PARA NUEVA RPC
+-- 8. PERMISOS EXPLÍCITOS EN TODAS LAS RPC SECURITY DEFINER
+-- Revoca PUBLIC (herencia implícita) → otorga solo a authenticated y service_role
+
+REVOKE ALL ON FUNCTION public.record_obligation_payment FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.record_internal_transfer FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.record_income FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.reverse_operation FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.record_debt_restructure FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_credit_card_purchase FROM PUBLIC;
 
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+        GRANT EXECUTE ON FUNCTION public.record_obligation_payment TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.record_internal_transfer TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.record_income TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.reverse_operation TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.record_debt_restructure TO authenticated;
         GRANT EXECUTE ON FUNCTION public.create_credit_card_purchase TO authenticated;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+        GRANT EXECUTE ON FUNCTION public.record_obligation_payment TO service_role;
+        GRANT EXECUTE ON FUNCTION public.record_internal_transfer TO service_role;
+        GRANT EXECUTE ON FUNCTION public.record_income TO service_role;
+        GRANT EXECUTE ON FUNCTION public.reverse_operation TO service_role;
+        GRANT EXECUTE ON FUNCTION public.record_debt_restructure TO service_role;
         GRANT EXECUTE ON FUNCTION public.create_credit_card_purchase TO service_role;
     END IF;
 END $$;
 
--- 9. REVOKE EXPLÍCITO DEL ROL anon (belt-and-suspenders)
+-- 9. REVOKE EXPLÍCITO DEL ROL anon (defensa en profundidad — por si persisten permisos heredados)
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN

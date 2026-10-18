@@ -2,9 +2,9 @@
 
 **Sprint:** Financial Core  
 **Branch:** `feat/financial-core`  
-**Fecha de remediación:** 2026-10-18  
+**Fecha de remediación:** 2026-10-18 (UX-03.1) | Hardening: 2026-10-18 (UX-03.1.1)  
 **Auditoría base:** `UX_03_FINANCIAL_PERSISTENCE_SECURITY.md`  
-**Estado:** Remediación P0/P1 completada — pruebas: 117/117 ✓
+**Estado:** Remediación P0/P1 + hardening SQL completados — pruebas: 117/117 ✓
 
 ---
 
@@ -256,6 +256,21 @@ Las siguientes condiciones deben cumplirse antes de cambiar `providerMode: 'supa
 | 12 | Suite unitaria Angular 117/117 ✓ | ✅ Completado (UX-03.1) |
 | 13 | Pruebas E2E (WebKit) pasando | ❌ Pendiente (requiere `playwright install webkit`) |
 | 14 | Agregar `https://yamicueto.github.io/personal-finance/auth/reset-password` a Redirect URLs en Supabase Dashboard | ❌ Pendiente (acción manual) |
+
+---
+
+## 6.1 Correcciones UX-03.1.1 — Hardening SQL previo a staging
+
+Hallazgos detectados en revisión del propietario corregidos antes de aplicar en staging:
+
+| # | Hallazgo | Corrección aplicada |
+|---|---|---|
+| H-01 | Idempotencia del índice UNIQUE usaba `pg_constraint` (incorrecto para índices) | Reemplazado por consulta a `pg_indexes` con `IF NOT EXISTS` explícito |
+| H-02 | Las 5 funciones SECURITY DEFINER existentes no tenían `REVOKE FROM PUBLIC` ni `GRANT TO authenticated` explícitos | Añadido `REVOKE ALL FROM PUBLIC` + `GRANT EXECUTE TO authenticated/service_role` para las 6 funciones |
+| H-03 | `rls_isolation_test_v2.sql` incluía `CREATE ROLE` y `GRANT ALL ON ALL TABLES` | Eliminados; el script asume los roles nativos de Supabase y no modifica permisos |
+| H-04 | RLS-03 aceptaba cualquier excepción como satisfactoria | Ahora solo acepta `foreign_key_violation`; cualquier otra excepción falla el caso |
+| H-05 | RLS-06 podía aprobar el segundo rechazo aunque el primer reverso hubiera fallado | El script verifica que el primer reverso retornó `success: true` antes de probar el segundo |
+| H-06 | `create_credit_card_purchase` no tenía clave de idempotencia | Añadido `p_idempotency_key` al RPC SQL; `idempotencyKey` al DTO `CreateCreditCardPurchaseDTO`; idempotencia en adaptador local y Supabase |
 
 ---
 

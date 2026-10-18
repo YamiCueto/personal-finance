@@ -45,6 +45,7 @@ export interface CreateCreditCardPurchaseDTO {
   totalInstallments: number;
   purchaseDate?: string;
   interestRateMonthly?: number;
+  idempotencyKey?: string;
 }
 
 export interface GenerateInstallmentDTO {

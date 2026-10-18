@@ -64,6 +64,9 @@ export class LocalFinancialAdapter
   // Caché de idempotencia en memoria: user_id:key -> FinancialOperationResult
   private idempotencyStore = new Map<string, { result: FinancialOperationResult; payload: any }>();
 
+  // Caché de idempotencia para compras de tarjeta (tipo distinto a FinancialOperationResult)
+  private purchaseIdempotencyStore = new Map<string, { result: CreditCardPurchase; payload: { amount: number; creditCardId: string } }>();
+
   constructor() {
     this.seedDefaultUserData('default-user');
   }
@@ -706,6 +709,17 @@ export class LocalFinancialAdapter
       throw new Error('La descripción de la compra es obligatoria');
     }
 
+    if (dto.idempotencyKey) {
+      const cacheKey = `${userId}:${dto.idempotencyKey}`;
+      const existing = this.purchaseIdempotencyStore.get(cacheKey);
+      if (existing) {
+        if (existing.payload.amount !== dto.amount || existing.payload.creditCardId !== dto.creditCardId) {
+          throw new Error(`Conflicto de idempotencia: la clave ${dto.idempotencyKey} ya fue utilizada con parámetros diferentes`);
+        }
+        return existing.result;
+      }
+    }
+
     const credits = this.creditProductsMap.get(userId) || [];
     const card = credits.find((c) => c.id === dto.creditCardId);
     if (!card) {
@@ -744,7 +758,6 @@ export class LocalFinancialAdapter
     const purchasesList = this.creditCardPurchasesMap.get(userId) || [];
     this.creditCardPurchasesMap.set(userId, [...purchasesList, purchase]);
 
-    // Actualizar cupo utilizado y disponible
     card.usedCreditLimit = FinancialCalculatorV2.fromCents(
       FinancialCalculatorV2.toCents(card.usedCreditLimit || 0) + FinancialCalculatorV2.toCents(dto.amount)
     );
@@ -753,6 +766,13 @@ export class LocalFinancialAdapter
     );
     card.currentPrincipalBalance = card.usedCreditLimit;
     card.updatedAt = new Date().toISOString();
+
+    if (dto.idempotencyKey) {
+      this.purchaseIdempotencyStore.set(`${userId}:${dto.idempotencyKey}`, {
+        payload: { amount: dto.amount, creditCardId: dto.creditCardId },
+        result: purchase,
+      });
+    }
 
     return purchase;
   }

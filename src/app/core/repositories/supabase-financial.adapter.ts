@@ -234,6 +234,7 @@ export class SupabaseFinancialAdapter
       p_total_installments: dto.totalInstallments,
       p_interest_rate_monthly: dto.interestRateMonthly ?? null,
       p_purchase_date: dto.purchaseDate ?? new Date().toISOString().substring(0, 10),
+      p_idempotency_key: dto.idempotencyKey ?? null,
     });
 
     if (error) throw new Error(error.message);
