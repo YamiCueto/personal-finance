@@ -2,9 +2,9 @@
 
 **Sprint:** Financial Core  
 **Branch:** `feat/financial-core`  
-**Fecha de remediación:** 2026-10-18 (UX-03.1) | Hardening: 2026-10-18 (UX-03.1.1)  
+**Fecha de remediación:** 2026-10-18 (UX-03.1) | Hardening: 2026-10-18 (UX-03.1.1, UX-03.1.2) | RLS staging local: 2026-10-18  
 **Auditoría base:** `UX_03_FINANCIAL_PERSISTENCE_SECURITY.md`  
-**Estado:** Remediación P0/P1 + hardening SQL completados — pruebas: 117/117 ✓
+**Estado:** Remediación + hardening completados — pruebas unitarias: 117/117 ✓ — RLS local: 6/6 ✓
 
 ---
 
@@ -187,9 +187,22 @@ Test Files  18 passed (18)
 
 No ejecutadas en esta sesión. El binario de WebKit requiere instalación previa (`npx playwright install webkit`). Pendiente para UX-03.2.
 
-### 4.3 Pruebas SQL (RLS)
+### 4.3 Pruebas SQL (RLS) — Ejecutadas en instancia local
 
-`supabase/tests/rls_isolation_test_v2.sql` preparado con 6 escenarios. Requiere aplicación de la migración en staging para ejecutarse. Pendiente para UX-03.2.
+**Entorno:** Supabase local en puertos `5442x` (Personal Finance), coexistiendo con `curso-ia-generativa` en `5432x`.  
+**Comando:** `psql postgresql://postgres:postgres@127.0.0.1:54422/postgres -f supabase/tests/rls_isolation_test_v2.sql`  
+**Resultado:** 6/6 PASSED — rollback total confirmado
+
+| ID | Descripción | Resultado | Mensaje observado |
+|---|---|---|---|
+| RLS-01 | SELECT cross-user | ✓ PASSED | `0 filas devueltas` |
+| RLS-02 | UPDATE cross-user | ✓ PASSED | `0 filas afectadas` |
+| RLS-03 | INSERT con FK cruzada | ✓ PASSED | `foreign_key_violation` |
+| RLS-04 | RPC con p_user_id de otro usuario | ✓ PASSED | `No autorizado: no puede operar en nombre de otro usuario` |
+| RLS-05 | RPC sin autenticación (sub vacío) | ✓ PASSED | `invalid input syntax for type uuid: ""` ¹ |
+| RLS-06 | Doble reverso del mismo ingreso | ✓ PASSED | `El ingreso ya fue revertido previamente` |
+
+¹ En local, `auth.uid()` falla al castear el sub vacío como UUID en lugar de retornar NULL. En staging con JWT real inválido o ausente, `auth.uid()` retorna NULL y el guard dispara `"Sesión no autenticada: operación denegada"`. La protección se mantiene en ambos casos.
 
 ---
 
@@ -271,6 +284,16 @@ Hallazgos detectados en revisión del propietario corregidos antes de aplicar en
 | H-04 | RLS-03 aceptaba cualquier excepción como satisfactoria | Ahora solo acepta `foreign_key_violation`; cualquier otra excepción falla el caso |
 | H-05 | RLS-06 podía aprobar el segundo rechazo aunque el primer reverso hubiera fallado | El script verifica que el primer reverso retornó `success: true` antes de probar el segundo |
 | H-06 | `create_credit_card_purchase` no tenía clave de idempotencia | Añadido `p_idempotency_key` al RPC SQL; `idempotencyKey` al DTO `CreateCreditCardPurchaseDTO`; idempotencia en adaptador local y Supabase |
+
+**Correcciones adicionales UX-03.1.2** (revisión del propietario sobre la rama remota):
+
+| # | Hallazgo | Corrección aplicada |
+|---|---|---|
+| H-07 | Columna `credit_card_purchases.idempotency_key` no existía en ninguna migración | Añadida en el security patch con `ADD COLUMN IF NOT EXISTS` + índice UNIQUE parcial `uq_cc_purchases_user_idempotency` |
+| H-08 | Comparación de parámetros de idempotencia en `create_credit_card_purchase` solo verificaba `amount` y `product_id` | Ampliada para incluir `total_installments`; misma ampliación en el adaptador local (`totalInstallments`) |
+| H-09 | `v_expected_def` declarado pero no utilizado en el check del índice de cuotas | Reemplazado por consulta a `pg_index` con verificación de `indisunique` y `indpred IS NOT NULL`; falla explícitamente si el índice existe con definición incorrecta |
+| H-10 | Script RLS simulaba sesión con `set_config(request.jwt.claim.sub)` pero sin `SET LOCAL ROLE authenticated` — queries bypasseaban RLS | Añadido `EXECUTE 'SET LOCAL ROLE authenticated'` + `set_config('request.jwt.claims', ...)` con formato completo de claims; verificación de `auth.uid()` antes de cada fase de prueba |
+| H-11 | Script RLS no manejaba FK `user_id REFERENCES auth.users(id)` — datos sintéticos fallaban al insertar | Añadida Fase 1: INSERT en `auth.users` con campos mínimos requeridos por Supabase, bajo el rol privilegiado previo al cambio de rol |
 
 ---
 
