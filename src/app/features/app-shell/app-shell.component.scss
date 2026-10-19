@@ -39,7 +39,8 @@
     .nav-text,
     .nav-counter,
     .user-details,
-    .btn-sidebar-reset .btn-text {
+    .btn-sidebar-reset .btn-text,
+    .btn-sidebar-signout .btn-text {
       display: none;
     }
 
@@ -52,6 +53,7 @@
     .nav-link { padding: 0.75rem; }
     .sidebar-demo-badge { padding: 0.35rem; }
     .sidebar-actions { flex-direction: column; align-items: center; }
+    .btn-sidebar-signout.btn-sidebar-signout-full { width: 32px; height: 32px; padding: 0; }
   }
 }
 
@@ -237,6 +239,18 @@
   height: 32px;
 
   &:hover { color: var(--red); border-color: rgba(239, 68, 68, 0.3); }
+
+  &.btn-sidebar-signout-full {
+    width: 100%;
+    height: auto;
+    padding: 0.45rem 0.65rem;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+
+    .btn-text {
+      font-weight: 500;
+    }
+  }
 }
 
 // ── 2. WRAPPER PRINCIPAL Y TOPBAR ────────────────────────────────────

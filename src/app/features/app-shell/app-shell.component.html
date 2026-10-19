@@ -114,26 +114,34 @@
       </div>
 
       <div class="sidebar-actions">
-        <button
-          type="button"
-          class="btn-sidebar-reset btn-reset-demo"
-          (click)="resetDemoScenario()"
-          title="Reiniciar a datos demostrativos iniciales"
-          aria-label="Reiniciar datos ficticios"
-          [disabled]="isSubmitting()"
-        >
-          <app-icon name="refresh" [size]="14" />
-          <span class="btn-text">Reiniciar Demo</span>
-        </button>
+        @if (financialFacade.isDemoMode()) {
+          <button
+            type="button"
+            class="btn-sidebar-reset btn-reset-demo"
+            (click)="resetDemoScenario()"
+            title="Reiniciar a datos demostrativos iniciales"
+            aria-label="Reiniciar datos ficticios"
+            [disabled]="isSubmitting()"
+            data-testid="reset-demo-button"
+          >
+            <app-icon name="refresh" [size]="14" />
+            <span class="btn-text">Reiniciar Demo</span>
+          </button>
+        }
 
         <button
           type="button"
           class="btn-sidebar-signout"
+          [class.btn-sidebar-signout-full]="!financialFacade.isDemoMode()"
           (click)="onSignOut()"
           title="Cerrar Sesión"
           aria-label="Cerrar sesión de la bóveda"
+          data-testid="sidebar-signout-button"
         >
           <app-icon name="logout" [size]="16" />
+          @if (!financialFacade.isDemoMode()) {
+            <span class="btn-text">Cerrar Sesión</span>
+          }
         </button>
       </div>
     </div>
@@ -684,17 +692,20 @@
               </div>
             </button>
 
-            <button
-              type="button"
-              class="more-option-card reset-demo-opt btn-reset-demo"
-              (click)="resetDemoScenario(); closeMobileMore()"
-            >
-              <app-icon name="refresh" [size]="24" />
-              <div class="opt-text">
-                <strong>Reiniciar Demo</strong>
-                <span>Restablecer datos</span>
-              </div>
-            </button>
+            @if (financialFacade.isDemoMode()) {
+              <button
+                type="button"
+                class="more-option-card reset-demo-opt btn-reset-demo"
+                (click)="resetDemoScenario(); closeMobileMore()"
+                data-testid="mobile-reset-demo-button"
+              >
+                <app-icon name="refresh" [size]="24" />
+                <div class="opt-text">
+                  <strong>Reiniciar Demo</strong>
+                  <span>Restablecer datos</span>
+                </div>
+              </button>
+            }
           </div>
         </div>
       </div>

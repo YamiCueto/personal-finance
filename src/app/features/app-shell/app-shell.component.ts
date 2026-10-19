@@ -397,6 +397,9 @@ export class AppShellComponent implements OnInit {
   // --- REINICIAR DEMO ---
 
   async resetDemoScenario(): Promise<void> {
+    if (!this.financialFacade.isDemoMode()) {
+      return;
+    }
     if (this.isSubmitting()) return;
     this.isSubmitting.set(true);
     this.clearFeedback();

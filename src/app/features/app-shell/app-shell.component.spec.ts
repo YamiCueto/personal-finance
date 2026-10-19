@@ -174,7 +174,15 @@ describe('AppShellComponent', () => {
     expect(component.actionError()).toContain('excede el saldo pendiente');
   });
 
-  it('should reset demo scenario to initial state on resetDemoScenario call', async () => {
+  it('should display the reset demo button and badge when in local-demo mode', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const resetBtn = compiled.querySelector('[data-testid="reset-demo-button"]');
+    const demoBadge = compiled.querySelector('[data-testid="demo-badge"]');
+    expect(resetBtn).not.toBeNull();
+    expect(demoBadge).not.toBeNull();
+  });
+
+  it('should reset demo scenario to initial state on resetDemoScenario call when in demo mode', async () => {
     await component.resetDemoScenario();
     expect(component.actionSuccess()).toContain('Escenario local reiniciado con éxito');
     expect(component.accounts().length).toBeGreaterThan(0);
@@ -184,5 +192,74 @@ describe('AppShellComponent', () => {
     await component.selectMonth(7);
     expect(component.selectedMonth()).toBe(7);
     expect(component.financialFacade.selectedPeriod().month).toBe(7);
+  });
+});
+
+describe('AppShellComponent with providerMode = supabase (Production Mode)', () => {
+  let component: AppShellComponent;
+  let fixture: ComponentFixture<AppShellComponent>;
+  let mockAuthService: {
+    currentUser: ReturnType<typeof signal<User | null>>;
+    signOut: any;
+  };
+  let router: Router;
+
+  const fakeUser: Partial<User> = {
+    id: 'user-cloud-1234',
+    email: 'cloud-user@personalfinance.dev',
+  };
+
+  beforeEach(async () => {
+    mockAuthService = {
+      currentUser: signal(fakeUser as User),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AppShellComponent],
+      providers: [
+        provideRouter([]),
+        provideFinancialCore({ providerMode: 'supabase' }),
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: LOCALE_ID, useValue: 'es-CO' },
+      ],
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture = TestBed.createComponent(AppShellComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should NOT display the reset demo button nor demo badge in supabase mode', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const resetBtn = compiled.querySelector('[data-testid="reset-demo-button"]');
+    const demoBadge = compiled.querySelector('[data-testid="demo-badge"]');
+    const mobileResetBtn = compiled.querySelector('[data-testid="mobile-reset-demo-button"]');
+
+    expect(resetBtn).toBeNull();
+    expect(demoBadge).toBeNull();
+    expect(mobileResetBtn).toBeNull();
+  });
+
+  it('should display the signout button with full label when not in demo mode', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const signoutBtn = compiled.querySelector('[data-testid="sidebar-signout-button"]');
+    expect(signoutBtn).not.toBeNull();
+    expect(signoutBtn?.textContent).toContain('Cerrar Sesión');
+  });
+
+  it('should exit early and NOT execute resetDemoScenario when in supabase mode', async () => {
+    await component.resetDemoScenario();
+    expect(component.actionSuccess()).toBeNull();
+    expect(component.actionError()).toBeNull();
+  });
+
+  it('should allow user to sign out successfully in supabase mode', async () => {
+    await component.onSignOut();
+    expect(mockAuthService.signOut).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
   });
 });
