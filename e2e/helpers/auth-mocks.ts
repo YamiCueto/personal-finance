@@ -68,6 +68,10 @@ export async function setupSupabaseMocks(page: Page) {
       });
     }
 
+    if (url.includes('/auth/v1/recover')) {
+      return route.fallback();
+    }
+
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -160,7 +164,7 @@ export async function mockSignupFailure(page: Page, errorMessage = 'User already
 
 export async function injectAuthenticatedSession(page: Page, user: MockUserConfig = MOCK_USER_A) {
   const session = buildSessionPayload(user);
-  const storageKey = 'sb-vcukikhnljcmitccrqng-auth-token';
+  const storageKey = 'sb-hlehsgwsjphvuyngzjry-auth-token';
 
   await page.addInitScript(
     ({ key, value }) => {
@@ -182,7 +186,7 @@ export async function injectAuthenticatedSession(page: Page, user: MockUserConfi
 
 export async function injectExpiredSession(page: Page, user: MockUserConfig = MOCK_USER_A) {
   const session = buildSessionPayload(user, -3600);
-  const storageKey = 'sb-vcukikhnljcmitccrqng-auth-token';
+  const storageKey = 'sb-hlehsgwsjphvuyngzjry-auth-token';
 
   await page.addInitScript(
     ({ key, value }) => {
@@ -207,6 +211,71 @@ export async function injectExpiredSession(page: Page, user: MockUserConfig = MO
       status: 401,
       contentType: 'application/json',
       body: JSON.stringify({ message: 'Token expired', code: 401 }),
+    });
+  });
+}
+
+export async function mockPasswordRecoverySuccess(page: Page) {
+  await page.route('**/auth/v1/recover*', async (route) => {
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    });
+  });
+}
+
+export async function mockPasswordRecoveryRateLimit(page: Page) {
+  await page.route('**/auth/v1/recover*', async (route) => {
+    return route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: 'over_email_send_rate_limit',
+        error_description: 'For security purposes, you can only request this once every 60 seconds.',
+        code: 'over_email_send_rate_limit',
+        msg: 'Rate limit reached. Please wait a few moments before trying again.',
+      }),
+    });
+  });
+}
+
+export async function mockPasswordUpdateSuccess(page: Page, user: MockUserConfig = MOCK_USER_A) {
+  const session = buildSessionPayload(user);
+  await page.route('**/auth/v1/user', async (route) => {
+    if (route.request().method() === 'PUT') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(session.user),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(session.user),
+    });
+  });
+}
+
+export async function mockPasswordUpdateFailure(page: Page, errorMessage = 'Auth session missing or expired') {
+  await page.route('**/auth/v1/user', async (route) => {
+    if (route.request().method() === 'PUT') {
+      return route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'unauthorized',
+          error_description: errorMessage,
+          code: 'unauthorized',
+          msg: errorMessage,
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Unauthorized', code: 401 }),
     });
   });
 }

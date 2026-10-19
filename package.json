@@ -29,6 +29,7 @@
     "@angular/build": "^22.1.2",
     "@angular/cli": "^22.1.2",
     "@angular/compiler-cli": "^22.1.0",
+    "@electric-sql/pglite": "^0.5.10",
     "@playwright/test": "^1.63.0",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",

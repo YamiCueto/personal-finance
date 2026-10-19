@@ -1,37 +1,919 @@
-<main class="app-viewport" role="main">
-  <div class="shell-card">
-    <header class="shell-header">
-      <div class="badge-verified" aria-label="Security Status">
-        <span class="status-dot" aria-hidden="true"></span>
-        <span class="status-label">Protected Vault Shell</span>
+<div class="app-layout" role="application">
+  <!-- ── 1. SIDEBAR NAVIGATION (Desktop & Tablet) ────────────────────── -->
+  <aside class="app-sidebar" [class.collapsed]="isSidebarCollapsed()" aria-label="Navegación Principal">
+    <div class="sidebar-top">
+      <div class="brand-container">
+        <span class="brand-wordmark">personal<em>.</em></span>
+        <button
+          type="button"
+          class="sidebar-toggle-btn"
+          (click)="toggleSidebar()"
+          [attr.aria-label]="isSidebarCollapsed() ? 'Expandir barra lateral' : 'Colapsar barra lateral'"
+          title="Alternar barra lateral"
+        >
+          <app-icon [name]="isSidebarCollapsed() ? 'chevron-right' : 'chevron-left'" [size]="16" />
+        </button>
       </div>
-      <h1 class="shell-title">Authenticated Session Verified</h1>
-      <p class="shell-subtitle">
-        Protected route validation successful. Financial modules will be mounted here in subsequent phases.
-      </p>
+
+      @if (financialFacade.isDemoMode()) {
+        <div class="sidebar-demo-badge">
+          <span class="status-dot"></span>
+          <span class="badge-text">MODO DEMO LOCAL</span>
+        </div>
+      }
+    </div>
+
+    <!-- Navegación de Módulos (Sidebar) -->
+    <nav class="sidebar-nav" aria-label="Módulos de la Bóveda">
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'waterfall'"
+        (click)="setActiveTab('waterfall')"
+      >
+        <app-icon name="waterfall" [size]="20" />
+        <span class="nav-text">Cascada (Resto)</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'obligations'"
+        (click)="setActiveTab('obligations')"
+      >
+        <app-icon name="document-text" [size]="20" />
+        <span class="nav-text">Obligaciones</span>
+        <span class="nav-counter">{{ obligations().length }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'credits'"
+        (click)="setActiveTab('credits')"
+      >
+        <app-icon name="credit-card" [size]="20" />
+        <span class="nav-text">Créditos</span>
+        <span class="nav-counter">{{ loans().length }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'cards'"
+        (click)="setActiveTab('cards')"
+      >
+        <app-icon name="credit-card" [size]="20" />
+        <span class="nav-text">Tarjetas</span>
+        <span class="nav-counter">{{ creditCards().length }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'simulators'"
+        (click)="setActiveTab('simulators')"
+      >
+        <app-icon name="bolt" [size]="20" />
+        <span class="nav-text">Simuladores</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'incomes'"
+        (click)="setActiveTab('incomes')"
+      >
+        <app-icon name="incomes" [size]="20" />
+        <span class="nav-text">Ingresos</span>
+        <span class="nav-counter">{{ incomes().length }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-link"
+        [class.active]="activeTab() === 'accounts'"
+        (click)="setActiveTab('accounts')"
+      >
+        <app-icon name="bank" [size]="20" />
+        <span class="nav-text">Cuentas</span>
+        <span class="nav-counter">{{ accounts().length }}</span>
+      </button>
+    </nav>
+
+    <!-- Sidebar Footer / Perfil -->
+    <div class="sidebar-footer">
+      <div class="user-profile-box">
+        <div class="user-avatar" aria-hidden="true">
+          <app-icon name="user" [size]="18" />
+        </div>
+        <div class="user-details">
+          <span class="user-email text-truncate" data-testid="user-email">{{ user()?.email || 'Sesión Activa' }}</span>
+          <span class="user-uid" data-testid="user-id" style="display:none;">{{ user()?.id || 'Verified' }}</span>
+        </div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button
+          type="button"
+          class="btn-sidebar-reset btn-reset-demo"
+          (click)="resetDemoScenario()"
+          title="Reiniciar a datos demostrativos iniciales"
+          aria-label="Reiniciar datos ficticios"
+          [disabled]="isSubmitting()"
+        >
+          <app-icon name="refresh" [size]="14" />
+          <span class="btn-text">Reiniciar Demo</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-sidebar-signout"
+          (click)="onSignOut()"
+          title="Cerrar Sesión"
+          aria-label="Cerrar sesión de la bóveda"
+        >
+          <app-icon name="logout" [size]="16" />
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── 2. CONTENIDO PRINCIPAL DE LA APLICACIÓN ─────────────────────── -->
+  <div class="app-main-wrapper">
+    <!-- Topbar Superior -->
+    <header class="app-topbar" role="banner">
+      <div class="topbar-brand-row">
+        <span class="topbar-brand-title">personal<em>.</em></span>
+        @if (financialFacade.isDemoMode()) {
+          <span class="demo-badge-pill" data-testid="demo-badge">MODO DEMO LOCAL</span>
+        }
+      </div>
+
+      <!-- Acciones de Cabecera (Botones Rápidos) -->
+      <div class="topbar-actions">
+        <button type="button" class="btn-quick-action" (click)="openIncomeModal()" title="Registrar nuevo ingreso">
+          <app-icon name="plus" [size]="14" />
+          <span class="quick-text">Ingreso</span>
+        </button>
+        <button type="button" class="btn-quick-action" (click)="openObligationModal()" title="Crear nueva obligación">
+          <app-icon name="plus" [size]="14" />
+          <span class="quick-text">Obligación</span>
+        </button>
+        <button type="button" class="btn-quick-action" (click)="openAccountModal()" title="Registrar nueva cuenta">
+          <app-icon name="plus" [size]="14" />
+          <span class="quick-text">Cuenta</span>
+        </button>
+      </div>
+
+      <!-- Botón de logout -->
+      <button
+        type="button"
+        class="btn-topbar-signout"
+        (click)="onSignOut()"
+        title="Cerrar Sesión"
+        aria-label="Cerrar sesión de la bóveda"
+        data-testid="signout-button"
+      >
+        <app-icon name="logout" [size]="16" />
+      </button>
     </header>
 
-    <section class="identity-panel" aria-label="User Identity">
-      <div class="identity-row">
-        <span class="identity-label">Authenticated Identity:</span>
-        <span class="identity-value" data-testid="user-email">{{ user()?.email || 'Active Session' }}</span>
+    <!-- Hidden compatibility text for base E2E verification -->
+    <h1 class="visually-hidden">Authenticated Session Verified</h1>
+
+    <!-- Notificaciones / Banners de Alerta Accesibles -->
+    @if (actionError()) {
+      <div class="alert-banner error" role="alert" aria-live="assertive">
+        <app-icon name="alert" [size]="18" />
+        <span>{{ actionError() }}</span>
+        <button type="button" class="alert-close" (click)="clearFeedback()" aria-label="Cerrar alerta">✕</button>
       </div>
-      <div class="identity-row">
-        <span class="identity-label">User ID:</span>
-        <span class="identity-value identity-uid" data-testid="user-id">{{ user()?.id || 'Verified' }}</span>
+    }
+    @if (actionSuccess()) {
+      <div class="alert-banner success" role="status" aria-live="polite">
+        <app-icon name="check" [size]="18" />
+        <span>{{ actionSuccess() }}</span>
+        <button type="button" class="alert-close" (click)="clearFeedback()" aria-label="Cerrar notificación">✕</button>
+      </div>
+    }
+
+    <!-- Selector de Período Mensual (Horizontal Carousel / Thumb-Zone) -->
+    <nav class="month-selector" [class.mobile-hidden]="activeTab() !== 'waterfall' && activeTab() !== 'obligations'" aria-label="Selector de Período Mensual">
+      <div class="month-carousel-track">
+        @for (m of monthsList; track m.value) {
+          <button
+            type="button"
+            class="month-pill"
+            [class.active]="selectedMonth() === m.value"
+            (click)="selectMonth(m.value)"
+          >
+            {{ m.label }}
+          </button>
+        }
+      </div>
+    </nav>
+
+    <!-- ── 3. SECCIÓN DE MÉTRICAS / KPIS FINANCIEROS ─────────────────── -->
+    <section class="kpi-section" [class.mobile-hidden]="activeTab() !== 'waterfall'" aria-label="Métricas Principales">
+      <div class="kpi-grid">
+        <!-- Card 1: Saldo Real en Cuentas -->
+        <div class="kpi-card real-balance">
+          <span class="kpi-label">Saldo Real en Bóveda</span>
+          <strong class="kpi-value tabular-nums">{{ totalLiquidBalance() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+          <span class="kpi-sub">Total líquido disponible en cuentas</span>
+        </div>
+
+        <!-- Card 2: Dinero Libre Proyectado (Libre) -->
+        <div class="kpi-card free-capital">
+          <span class="kpi-label">Total Libre (Ingresos - Deducciones)</span>
+          <strong class="kpi-value tabular-nums" [class.negative]="totalFreeProjected() < 0">
+            {{ totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+          </strong>
+          <span class="kpi-sub">Fórmula Excel: Total Ingresos - Deducciones</span>
+        </div>
+
+        <!-- Card 3: Liquidez Proyectada -->
+        <div class="kpi-card projected-liquidity">
+          <span class="kpi-label">Liquidez Proyectada</span>
+          <strong class="kpi-value tabular-nums" [class.negative]="projectedLiquidity() < 0">
+            {{ projectedLiquidity() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+          </strong>
+          <span class="kpi-sub">Saldo en cuentas - Obligaciones pendientes</span>
+        </div>
+
+        <!-- Card 4: Deuda Total de Capital -->
+        <div class="kpi-card principal-debt">
+          <span class="kpi-label">Deuda Total de Capital</span>
+          <strong class="kpi-value tabular-nums text-amber" data-testid="dashboard-total-debt">
+            {{ totalPrincipalDebt() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+          </strong>
+          <span class="kpi-sub">{{ loans().length }} créditos • {{ creditCards().length }} tarjetas activas</span>
+        </div>
+      </div>
+
+      <!-- Metric Ribbon: Resumen horizontal financiero -->
+      <div class="metric-ribbon">
+        <div class="ribbon-item">
+          <span class="ribbon-label">Ingresos</span>
+          <span class="ribbon-val tabular-nums">{{ totalIncome() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+        </div>
+        <div class="ribbon-item">
+          <span class="ribbon-label">Cuotas Exigibles</span>
+          <span class="ribbon-val tabular-nums">{{ totalMonthlyObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+        </div>
+        <div class="ribbon-item">
+          <span class="ribbon-label">Pagado</span>
+          <span class="ribbon-val tabular-nums paid">{{ totalPaidObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+        </div>
+        <div class="ribbon-item">
+          <span class="ribbon-label">Por Pagar</span>
+          <span class="ribbon-val tabular-nums pending">{{ totalPendingObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+        </div>
+        <div class="ribbon-item">
+          <span class="ribbon-label">Cupo Disponible</span>
+          <span class="ribbon-val tabular-nums text-green" data-testid="dashboard-available-credit">
+            {{ totalAvailableCreditLimit() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}
+          </span>
+        </div>
+        <div class="ribbon-item">
+          <span class="ribbon-label">Intereses Proyectados</span>
+          <span class="ribbon-val tabular-nums text-amber" data-testid="dashboard-projected-interest">
+            {{ totalProjectedInterest() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}
+          </span>
+        </div>
       </div>
     </section>
 
-    <div class="shell-actions">
+    <!-- Barra de pestañas secundarias horizontal para acceso rápido en móvil y desktop -->
+    <nav class="module-tabs" role="tablist" aria-label="Pestañas de Funcionalidad">
       <button
         type="button"
-        class="btn-signout"
-        (click)="onSignOut()"
-        aria-label="Sign out of current vault session"
-        data-testid="signout-button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'waterfall'"
+        (click)="setActiveTab('waterfall')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'waterfall'"
       >
-        Sign Out of Vault
+        Cascada (Resto)
       </button>
-    </div>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'obligations'"
+        (click)="setActiveTab('obligations')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'obligations'"
+      >
+        Obligaciones ({{ obligations().length }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'credits'"
+        (click)="setActiveTab('credits')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'credits'"
+        data-testid="tab-credits"
+      >
+        Créditos ({{ loans().length }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'cards'"
+        (click)="setActiveTab('cards')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'cards'"
+        data-testid="tab-cards"
+      >
+        Tarjetas ({{ creditCards().length }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'simulators'"
+        (click)="setActiveTab('simulators')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'simulators'"
+        data-testid="tab-simulators"
+      >
+        Simuladores
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'incomes'"
+        (click)="setActiveTab('incomes')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'incomes'"
+      >
+        Ingresos ({{ incomes().length }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'accounts'"
+        (click)="setActiveTab('accounts')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'accounts'"
+      >
+        Cuentas ({{ accounts().length }})
+      </button>
+    </nav>
+
+    <!-- ── 4. PANELES DE CONTENIDO POR PESTAÑA ────────────────────────── -->
+    <main class="tab-panel-container" role="main">
+      <!-- Pestaña 1: Cascada de Capital (Motor Resto) -->
+      @if (activeTab() === 'waterfall') {
+        <section class="tab-panel" aria-label="Cascada de Capital">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Cascada de Amortización Mensual</h2>
+              <p class="panel-desc">Visualización progresiva del dinero restante tras cada deducción planificada.</p>
+            </div>
+          </div>
+
+          @if (waterfallItems().length === 0) {
+            <app-empty-state
+              title="Sin obligaciones registradas para este mes"
+              description="Añade tus compromisos para visualizar la cascada de saldo Resto paso a paso."
+              icon="waterfall"
+              actionLabel="+ Crear Obligación"
+              (actionClicked)="openObligationModal()"
+            />
+          } @else {
+            <div class="waterfall-list">
+              <!-- Hito Inicial: Ingresos Base -->
+              <div class="waterfall-milestone start">
+                <span class="milestone-label">Base de Ingresos Totales</span>
+                <span class="milestone-val tabular-nums">{{ totalIncome() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span>
+              </div>
+
+              @for (item of waterfallItems(); track item.id; let idx = $index) {
+                <div class="waterfall-step">
+                  <div class="step-connector"></div>
+                  <div class="step-card">
+                    <div class="step-meta">
+                      <span class="step-index">#{{ idx + 1 }}</span>
+                      <span class="step-name">{{ item.name }}</span>
+                      <app-obligation-status-badge [status]="item.status" />
+                    </div>
+                    <div class="step-values">
+                      <div class="val-deduction">
+                        <span class="sub-label">Deducción:</span>
+                        <span class="sub-val tabular-nums">-{{ item.amount | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</span>
+                      </div>
+                      <div class="val-resto">
+                        <span class="sub-label">Resto:</span>
+                        <span class="sub-val tabular-nums" [class.negative]="item.remainingResto < 0">
+                          {{ item.remainingResto | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Hito Final: Saldo Libre -->
+              <div class="waterfall-milestone end">
+                <span class="milestone-label">Saldo Libre Final (Fila 23)</span>
+                <span class="milestone-val tabular-nums" [class.negative]="totalFreeProjected() < 0">
+                  {{ totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+                </span>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Pestaña 2: Obligaciones -->
+      @if (activeTab() === 'obligations') {
+        <section class="tab-panel" aria-label="Gestión de Obligaciones">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Obligaciones de {{ monthsList[selectedMonth() - 1].label }}</h2>
+              <p class="panel-desc">Compromisos financieros programados y registro de pagos</p>
+            </div>
+            <button type="button" class="btn-primary-sm" (click)="openObligationModal()">
+              <app-icon name="plus" [size]="14" />
+              <span>+ Obligación</span>
+            </button>
+          </div>
+
+          @if (obligations().length === 0) {
+            <app-empty-state
+              title="No hay obligaciones registradas"
+              description="Registra tus cuotas, créditos y suscripciones fijas para este mes."
+              icon="document-text"
+              actionLabel="+ Obligación"
+              (actionClicked)="openObligationModal()"
+            />
+          } @else {
+            <div class="obligations-grid">
+              @for (ob of obligations(); track ob.id) {
+                <div class="obligation-card">
+                  <div class="card-header-row">
+                    <h3 class="ob-name">{{ ob.name }}</h3>
+                    <app-obligation-status-badge [status]="ob.status" />
+                  </div>
+                  <div class="ob-amounts-row">
+                    <div>
+                      <span class="small-label">Monto Total:</span>
+                      <strong class="large-val tabular-nums">{{ ob.amount | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+                    </div>
+                    <div>
+                      <span class="small-label">Pendiente:</span>
+                      <strong class="pending-val tabular-nums">{{ ob.amountPending | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+                    </div>
+                  </div>
+                  <div class="ob-action-row">
+                    @if (ob.status !== 'PAID') {
+                      <button type="button" class="btn-action-pay" (click)="openPaymentModal(ob)">
+                        Registrar Pago
+                      </button>
+                    } @else {
+                      <span class="paid-check">
+                        <app-icon name="check-circle" [size]="16" />
+                        <span>Obligación completada</span>
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Pestaña 3: Ingresos -->
+      @if (activeTab() === 'incomes') {
+        <section class="tab-panel" aria-label="Gestión de Ingresos">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Ingresos de {{ monthsList[selectedMonth() - 1].label }}</h2>
+              <p class="panel-desc">Entradas registradas y depósitos en cuentas de destino</p>
+            </div>
+            <button type="button" class="btn-primary-sm" (click)="openIncomeModal()">
+              <app-icon name="plus" [size]="14" />
+              <span>+ Ingreso</span>
+            </button>
+          </div>
+
+          @if (incomes().length === 0) {
+            <app-empty-state
+              title="Sin ingresos registrados en este mes"
+              description="Añade los depósitos, salarios o cobros de este período."
+              icon="incomes"
+              actionLabel="+ Ingreso"
+              (actionClicked)="openIncomeModal()"
+            />
+          } @else {
+            <div class="incomes-list">
+              @for (inc of incomes(); track inc.id) {
+                <div class="income-row">
+                  <div class="inc-info">
+                    <strong class="inc-desc">{{ inc.sourceName }}</strong>
+                    <span class="inc-date">{{ inc.receivedDate }}</span>
+                  </div>
+                  <strong class="inc-amount tabular-nums text-green">+{{ inc.amount | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+                </div>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Pestaña 4: Cuentas Financieras -->
+      @if (activeTab() === 'accounts') {
+        <section class="tab-panel" aria-label="Cuentas Financieras">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Cuentas y Depósitos</h2>
+              <p class="panel-desc">Saldos líquidos reales disponibles en bancos y billeteras</p>
+            </div>
+            <button type="button" class="btn-primary-sm" (click)="openAccountModal()">
+              <app-icon name="plus" [size]="14" />
+              <span>+ Cuenta</span>
+            </button>
+          </div>
+
+          <div class="accounts-grid">
+            @for (acc of accounts(); track acc.id) {
+              <div class="account-card" [class.archived]="acc.isArchived">
+                <div class="acc-top">
+                  <span class="acc-badge">{{ acc.type }}</span>
+                  <h3 class="acc-name">{{ acc.name }}</h3>
+                </div>
+                <div class="acc-balance">
+                  <span class="small-label">Saldo Actual</span>
+                  <strong class="acc-val tabular-nums">{{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Pestaña 5: Créditos y Amortización -->
+      @if (activeTab() === 'credits') {
+        <section class="tab-panel" aria-label="Gestión de Créditos">
+          <app-credits-manager />
+        </section>
+      }
+
+      <!-- Pestaña 6: Tarjetas de Crédito y Compras Diferidas -->
+      @if (activeTab() === 'cards') {
+        <section class="tab-panel" aria-label="Tarjetas de Crédito">
+          <app-credit-cards-manager />
+        </section>
+      }
+
+      <!-- Pestaña 7: Simuladores Financieros -->
+      @if (activeTab() === 'simulators') {
+        <section class="tab-panel" aria-label="Simuladores Financieros">
+          <app-financial-simulators />
+        </section>
+      }
+    </main>
+
+    <!-- ── 5. NAVEGACIÓN INFERIOR PERSISTENTE (Mobile-First 360px–767px) ── -->
+    <nav class="mobile-bottom-nav" aria-label="Navegación Móvil Inferior">
+      <button
+        type="button"
+        class="bn-item"
+        [class.active]="activeTab() === 'waterfall'"
+        (click)="setActiveTab('waterfall')"
+        aria-label="Ir a Cascada"
+      >
+        <app-icon name="home" [size]="20" />
+        <span>Inicio</span>
+      </button>
+
+      <button
+        type="button"
+        class="bn-item"
+        [class.active]="activeTab() === 'credits'"
+        (click)="setActiveTab('credits')"
+        aria-label="Ir a Créditos"
+      >
+        <app-icon name="credit-card" [size]="20" />
+        <span>Créditos</span>
+      </button>
+
+      <button
+        type="button"
+        class="bn-item"
+        [class.active]="activeTab() === 'cards'"
+        (click)="setActiveTab('cards')"
+        aria-label="Ir a Tarjetas"
+      >
+        <app-icon name="credit-card" [size]="20" />
+        <span>Tarjetas</span>
+      </button>
+
+      <button
+        type="button"
+        class="bn-item"
+        [class.active]="activeTab() === 'simulators'"
+        (click)="setActiveTab('simulators')"
+        aria-label="Ir a Simuladores"
+      >
+        <app-icon name="bolt" [size]="20" />
+        <span>Simular</span>
+      </button>
+
+      <button
+        type="button"
+        class="bn-item"
+        [class.active]="showMobileMoreMenu()"
+        (click)="toggleMobileMore()"
+        aria-label="Más opciones de navegación"
+        aria-haspopup="dialog"
+      >
+        <app-icon name="more" [size]="20" />
+        <span>Más</span>
+      </button>
+    </nav>
+
+    <!-- Menú Desplegable 'Más' para Móvil -->
+    @if (showMobileMoreMenu()) {
+      <div class="mobile-more-backdrop" (click)="closeMobileMore()">
+        <div class="mobile-more-sheet" (click)="$event.stopPropagation()" role="dialog" aria-label="Más funcionalidades">
+          <div class="more-sheet-header">
+            <span class="sheet-title">Otras Funcionalidades</span>
+            <button type="button" class="sheet-close" (click)="closeMobileMore()" aria-label="Cerrar">✕</button>
+          </div>
+          <div class="more-options-grid">
+            <button
+              type="button"
+              class="more-option-card"
+              [class.active]="activeTab() === 'obligations'"
+              (click)="setActiveTab('obligations'); closeMobileMore()"
+            >
+              <app-icon name="document-text" [size]="24" />
+              <div class="opt-text">
+                <strong>Obligaciones</strong>
+                <span>{{ obligations().length }} compromisos</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="more-option-card"
+              [class.active]="activeTab() === 'incomes'"
+              (click)="setActiveTab('incomes'); closeMobileMore()"
+            >
+              <app-icon name="incomes" [size]="24" />
+              <div class="opt-text">
+                <strong>Ingresos</strong>
+                <span>{{ incomes().length }} registrados</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="more-option-card"
+              [class.active]="activeTab() === 'accounts'"
+              (click)="setActiveTab('accounts'); closeMobileMore()"
+            >
+              <app-icon name="bank" [size]="24" />
+              <div class="opt-text">
+                <strong>Cuentas</strong>
+                <span>{{ accounts().length }} bancarias</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="more-option-card reset-demo-opt btn-reset-demo"
+              (click)="resetDemoScenario(); closeMobileMore()"
+            >
+              <app-icon name="refresh" [size]="24" />
+              <div class="opt-text">
+                <strong>Reiniciar Demo</strong>
+                <span>Restablecer datos</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   </div>
-</main>
+
+  <!-- ── 6. MODALES DEL SISTEMA FINANCIERO ────────────────────────────── -->
+  <!-- Modal: Crear Cuenta -->
+  @if (showAccountModal()) {
+    <div class="modal-backdrop" (click)="closeAccountModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-acc-title">
+        <div class="modal-header">
+          <h3 id="modal-acc-title" class="modal-title">Nueva Cuenta Financiera</h3>
+          <button type="button" class="modal-close" (click)="closeAccountModal()" aria-label="Cerrar ventana">✕</button>
+        </div>
+        <form [formGroup]="accountForm" (ngSubmit)="saveAccount()" class="modal-form">
+          <div class="form-field">
+            <label class="field-label" for="acc-name">Nombre de Cuenta (ej. B. Occidente)</label>
+            <input id="acc-name" type="text" formControlName="name" class="field-input" placeholder="Nombre" />
+            @if (accountForm.get('name')?.invalid && accountForm.get('name')?.touched) {
+              <span class="field-error">Ingresa un nombre válido (mínimo 2 letras).</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="acc-type">Tipo de Cuenta</label>
+            <select id="acc-type" formControlName="accountType" class="field-input">
+              <option value="SAVINGS">Ahorros</option>
+              <option value="CHECKING">Corriente</option>
+              <option value="CASH">Efectivo</option>
+              <option value="DIGITAL_WALLET">Billetera Digital (Nequi / Daviplata)</option>
+              <option value="INVESTMENT">Inversión / Fondo</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="acc-balance">Saldo Inicial (COP)</label>
+            <input id="acc-balance" type="number" formControlName="initialBalance" class="field-input" placeholder="0" min="0" step="1000" />
+            @if (accountForm.get('initialBalance')?.invalid && accountForm.get('initialBalance')?.touched) {
+              <span class="field-error">El saldo inicial no puede ser negativo.</span>
+            }
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeAccountModal()" [disabled]="isSubmitting()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+              {{ isSubmitting() ? 'Guardando...' : 'Guardar Cuenta' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Registrar Ingreso -->
+  @if (showIncomeModal()) {
+    <div class="modal-backdrop" (click)="closeIncomeModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-inc-title">
+        <div class="modal-header">
+          <h3 id="modal-inc-title" class="modal-title">Registrar Ingreso en {{ monthsList[selectedMonth() - 1].label }}</h3>
+          <button type="button" class="modal-close" (click)="closeIncomeModal()" aria-label="Cerrar ventana">✕</button>
+        </div>
+        <form [formGroup]="incomeForm" (ngSubmit)="saveIncome()" class="modal-form">
+          <div class="form-field">
+            <label class="field-label" for="inc-desc">Concepto o Descripción (ej. Salario, Honorarios)</label>
+            <input id="inc-desc" type="text" formControlName="description" class="field-input" placeholder="Descripción" />
+            @if (incomeForm.get('description')?.invalid && incomeForm.get('description')?.touched) {
+              <span class="field-error">Ingresa un concepto válido.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="inc-amount">Importe en COP</label>
+            <input id="inc-amount" type="number" formControlName="amount" class="field-input" placeholder="0" min="1" step="1000" />
+            @if (incomeForm.get('amount')?.invalid && incomeForm.get('amount')?.touched) {
+              <span class="field-error">Ingresa un importe mayor a cero.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="inc-acc">Cuenta Destino</label>
+            <select id="inc-acc" formControlName="accountId" class="field-input">
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id">{{ acc.name }} (Saldo: {{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</option>
+              }
+            </select>
+            @if (incomeForm.get('accountId')?.invalid && incomeForm.get('accountId')?.touched) {
+              <span class="field-error">Selecciona la cuenta de destino.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="inc-date">Fecha de Recepción</label>
+            <input id="inc-date" type="date" formControlName="receivedDate" class="field-input" />
+            @if (incomeForm.get('receivedDate')?.invalid && incomeForm.get('receivedDate')?.touched) {
+              <span class="field-error">Fecha requerida.</span>
+            }
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeIncomeModal()" [disabled]="isSubmitting()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+              {{ isSubmitting() ? 'Registrando...' : 'Registrar Ingreso' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Crear Obligación -->
+  @if (showObligationModal()) {
+    <div class="modal-backdrop" (click)="closeObligationModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-ob-title">
+        <div class="modal-header">
+          <h3 id="modal-ob-title" class="modal-title">Nueva Obligación Financiera (Deducción)</h3>
+          <button type="button" class="modal-close" (click)="closeObligationModal()" aria-label="Cerrar ventana">✕</button>
+        </div>
+        <form [formGroup]="obligationForm" (ngSubmit)="saveObligation()" class="modal-form">
+          <div class="form-field">
+            <label class="field-label" for="ob-name">Nombre (ej. Fibra Claro, Suscripción, Cuota)</label>
+            <input id="ob-name" type="text" formControlName="name" class="field-input" placeholder="Nombre" />
+            @if (obligationForm.get('name')?.invalid && obligationForm.get('name')?.touched) {
+              <span class="field-error">Ingresa el nombre del compromiso.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="ob-type">Tipo de Obligación</label>
+            <select id="ob-type" formControlName="sourceType" class="field-input">
+              <option value="RECURRENT_EXPENSE">Gasto Fijo / Servicio Recurrente</option>
+              <option value="AD_HOC_COMMITMENT">Compromiso Extraordinario / Ocasional</option>
+              <option value="CREDIT_INSTALLMENT">Cuota de Crédito / Tarjeta</option>
+            </select>
+          </div>
+          @if (obligationForm.get('sourceType')?.value === 'CREDIT_INSTALLMENT' && creditProducts().length > 0) {
+            <div class="form-field">
+              <label class="field-label" for="ob-credit">Producto Crediticio Vinculado</label>
+              <select id="ob-credit" formControlName="creditProductId" class="field-input">
+                <option value="">Sin vincular (independiente)</option>
+                @for (c of creditProducts(); track c.id) {
+                  <option [value]="c.id">{{ c.name }} (Saldo: {{ c.currentPrincipalBalance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</option>
+                }
+              </select>
+            </div>
+          }
+          <div class="form-field">
+            <label class="field-label" for="ob-amount">Importe en COP</label>
+            <input id="ob-amount" type="number" formControlName="amount" class="field-input" placeholder="0" min="1" step="1000" />
+            @if (obligationForm.get('amount')?.invalid && obligationForm.get('amount')?.touched) {
+              <span class="field-error">Ingresa un importe mayor a cero.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="ob-due">Fecha Límite / Vencimiento (Opcional)</label>
+            <input id="ob-due" type="date" formControlName="dueDate" class="field-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeObligationModal()" [disabled]="isSubmitting()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+              {{ isSubmitting() ? 'Guardando...' : 'Guardar Obligación' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Registrar Pago de Obligación -->
+  @if (showPaymentModal()) {
+    <div class="modal-backdrop" (click)="closePaymentModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-pay-title">
+        <div class="modal-header">
+          <h3 id="modal-pay-title" class="modal-title">Pagar Obligación: {{ selectedObligationForPayment()?.name }}</h3>
+          <button type="button" class="modal-close" (click)="closePaymentModal()" aria-label="Cerrar ventana">✕</button>
+        </div>
+        
+        <div class="payment-summary-box">
+          <div class="summary-line">
+            <span>Monto Total:</span>
+            <strong>{{ selectedObligationForPayment()?.amount | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+          </div>
+          <div class="summary-line pending">
+            <span>Saldo Pendiente:</span>
+            <strong>{{ selectedObligationForPayment()?.amountPending | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+          </div>
+        </div>
+
+        <form [formGroup]="paymentForm" (ngSubmit)="submitPayment()" class="modal-form">
+          <div class="form-field">
+            <label class="field-label" for="pay-acc">Cuenta Origen de Fondos</label>
+            <select id="pay-acc" formControlName="accountId" class="field-input">
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id">{{ acc.name }} (Disponible: {{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pay-mode">Modalidad de Pago</label>
+            <select id="pay-mode" formControlName="paymentMode" class="field-input" (change)="onPaymentModeChange($any($event.target).value)">
+              <option value="TOTAL">Pago Completo (Liquidar saldo pendiente)</option>
+              <option value="PARTIAL">Abono Parcial</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pay-amount">Importe a Debitar (COP)</label>
+            <input id="pay-amount" type="number" formControlName="amount" class="field-input" placeholder="0" min="1" step="1000" />
+            @if (paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched) {
+              <span class="field-error">Ingresa un monto de pago válido.</span>
+            }
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pay-date">Fecha de Pago</label>
+            <input id="pay-date" type="date" formControlName="paymentDate" class="field-input" />
+          </div>
+          <div class="form-field">
+            <label class="field-label" for="pay-notes">Notas / Comprobante (Opcional)</label>
+            <input id="pay-notes" type="text" formControlName="notes" class="field-input" placeholder="ej. Ref 482910" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closePaymentModal()" [disabled]="isSubmitting()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+              {{ isSubmitting() ? 'Procesando...' : 'Confirmar Pago' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

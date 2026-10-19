@@ -1,0 +1,409 @@
+<div class="cards-manager-container" data-testid="credit-cards-manager">
+  <!-- Cabecera de Sección -->
+  <div class="section-header">
+    <div class="header-titles">
+      <h2 class="title">Tarjetas de Crédito y Compras Diferidas</h2>
+      <p class="subtitle">Monitoreo de cupos, compras a cuotas y liquidación determinista de extractos mensuales</p>
+    </div>
+    <button
+      type="button"
+      class="btn-primary"
+      data-testid="btn-open-create-card"
+      (click)="openCreateCardModal()"
+    >
+      <app-icon name="plus" [size]="16" />
+      <span>Nueva Tarjeta</span>
+    </button>
+  </div>
+
+  <!-- Feedback Banner -->
+  @if (actionMessage(); as msg) {
+    <div
+      class="alert-banner"
+      [class.success]="msg.type === 'success'"
+      [class.error]="msg.type === 'error'"
+      role="status"
+      aria-live="polite"
+      data-testid="card-action-alert"
+    >
+      <span class="alert-icon">
+        <app-icon [name]="msg.type === 'success' ? 'check' : 'alert'" [size]="16" />
+      </span>
+      <span class="alert-text">{{ msg.text }}</span>
+      <button type="button" class="alert-close" (click)="actionMessage.set(null)" aria-label="Cerrar notificación">
+        <app-icon name="x" [size]="14" />
+      </button>
+    </div>
+  }
+
+  <!-- Lista de Tarjetas -->
+  @if (creditCards().length === 0) {
+    <div class="empty-state" data-testid="empty-cards">
+      <div class="empty-icon">
+        <app-icon name="credit-card" [size]="28" />
+      </div>
+      <h3 class="empty-title">No hay tarjetas de crédito registradas</h3>
+      <p class="empty-desc">Registra tus tarjetas para controlar compras diferidas, cupos disponibles y proyectar extractos.</p>
+      <button type="button" class="btn-secondary" (click)="openCreateCardModal()">Registrar primera tarjeta</button>
+    </div>
+  } @else {
+    <div class="cards-grid">
+      @for (card of creditCards(); track card.id) {
+        <div class="credit-card-panel" [attr.data-testid]="'card-panel-' + card.id">
+          <!-- Visualización realista de tarjeta bancaria -->
+          <div class="card-visual-wrapper">
+            <app-credit-card-visual
+              [bankName]="card.name"
+              [network]="card.name.toUpperCase().includes('MASTER') ? 'MASTERCARD' : 'VISA'"
+              [cutoffDay]="card.statementCutoffDay || 15"
+              [lastFourDigits]="'4829'"
+            />
+          </div>
+
+          <!-- Encabezado de la Tarjeta -->
+          <div class="panel-header">
+            <div class="card-identity">
+              <span class="card-brand-badge">Tarjeta de Crédito</span>
+              <h3 class="card-name">{{ card.name }}</h3>
+              <span class="card-inst">{{ card.institutionId || 'Entidad Financiera' }}</span>
+            </div>
+            <div class="card-status-badge active">Activa</div>
+          </div>
+
+          <!-- Bloque de Cupo (Fidelidad Prototipo) -->
+          <div class="cupo-card">
+            <div class="cupo-row">
+              <span class="cupo-lbl">Cupo Aprobado</span>
+              <span class="cupo-val font-mono">{{ formatMoney(card.approvedCreditLimit || 0) }}</span>
+            </div>
+            <div class="cupo-row">
+              <span class="cupo-lbl">Cupo Usado</span>
+              <span class="cupo-val font-mono text-danger" data-testid="card-used-limit">
+                {{ formatMoney(card.usedCreditLimit ?? card.currentPrincipalBalance ?? 0) }}
+              </span>
+            </div>
+            <div class="cupo-bar" role="progressbar" [attr.aria-valuenow]="calculateUsagePercent(card)" aria-valuemin="0" aria-valuemax="100">
+              <div
+                class="cupo-fill"
+                [style.width.%]="calculateUsagePercent(card)"
+                [class.warn]="calculateUsagePercent(card) > 50 && calculateUsagePercent(card) <= 80"
+                [class.danger]="calculateUsagePercent(card) > 80"
+              ></div>
+            </div>
+            <div class="cupo-sub-row">
+              <span>{{ calculateUsagePercent(card) }}% utilizado</span>
+            </div>
+            <div class="cupo-row mt-sm">
+              <span class="cupo-lbl">Disponible</span>
+              <span class="cupo-val font-mono text-green" data-testid="card-available-limit">
+                {{ formatMoney(card.availableCreditLimit ?? 0) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Métricas Secundarias del Producto -->
+          <div class="card-meta-chips">
+            <div class="meta-chip">
+              <span class="chip-label">Corte</span>
+              <span class="chip-val font-mono">Día {{ card.statementCutoffDay || 15 }}</span>
+            </div>
+            <div class="meta-chip">
+              <span class="chip-label">Límite Pago</span>
+              <span class="chip-val font-mono">Día {{ card.paymentDueDay || card.duePaymentDay || 5 }}</span>
+            </div>
+            <div class="meta-chip">
+              <span class="chip-label">Tasa</span>
+              <span class="chip-val">{{ card.effectiveAnnualRate }}% EA</span>
+            </div>
+            <div class="meta-chip">
+              <span class="chip-label">Manejo</span>
+              <span class="chip-val font-mono">{{ formatMoney(card.managementFeeMonthly || 0) }}</span>
+            </div>
+          </div>
+
+          <!-- Listado de Compras Diferidas -->
+          <div class="purchases-section">
+            <div class="purchases-header">
+              <h4 class="purchases-title">Compras Diferidas Activas</h4>
+              <button
+                type="button"
+                class="btn-sub-action"
+                data-testid="btn-add-purchase"
+                (click)="openAddPurchaseModal(card)"
+              >
+                <app-icon name="plus" [size]="14" />
+                <span>Registrar Compra</span>
+              </button>
+            </div>
+
+            @if (getPurchasesForCard(card.id).length === 0) {
+              <div class="no-purchases-note">Sin compras diferidas pendientes en esta tarjeta.</div>
+            } @else {
+              <div class="purchases-list" data-testid="purchases-list">
+                @for (pur of getPurchasesForCard(card.id); track pur.id) {
+                  <div class="purchase-item" [attr.data-testid]="'purchase-item-' + pur.id">
+                    <div class="purchase-info">
+                      <span class="purchase-desc font-semibold">{{ pur.description }}</span>
+                      <span class="purchase-meta">
+                        {{ pur.purchaseDate }} • Cuota {{ pur.totalInstallments - pur.remainingInstallments + 1 }}/{{ pur.totalInstallments }}
+                        • Tasa: {{ pur.interestRateMonthly }}% NMV
+                      </span>
+                    </div>
+                    <div class="purchase-amounts">
+                      <span class="purchase-total">{{ formatMoney(pur.originalAmount) }}</span>
+                      <span class="purchase-monthly text-amber">
+                        ~{{ formatMoney(pur.monthlyCapital + pur.monthlyInterest) }}/mes
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Acciones de la Tarjeta -->
+          <div class="panel-actions">
+            <button
+              type="button"
+              class="btn-generate-statement"
+              data-testid="btn-generate-statement"
+              (click)="generateStatementObligation(card)"
+            >
+              <app-icon name="document-text" [size]="16" />
+              <span>Generar Extracto / Cuota del Mes</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal: Crear Tarjeta de Crédito -->
+  @if (showCreateCardModal()) {
+    <div class="modal-backdrop" (click)="closeCreateCardModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-card-title">
+        <div class="modal-header">
+          <h3 id="modal-card-title" class="modal-title">Registrar Tarjeta de Crédito</h3>
+          <button type="button" class="modal-close" (click)="closeCreateCardModal()" aria-label="Cerrar ventana">
+            <app-icon name="x" [size]="18" />
+          </button>
+        </div>
+
+        <form [formGroup]="cardForm" (ngSubmit)="submitCreateCard()" class="modal-form">
+          <div class="form-group">
+            <label for="card-name" class="form-label">Nombre de la Tarjeta *</label>
+            <input
+              id="card-name"
+              type="text"
+              class="form-input"
+              formControlName="name"
+              placeholder="Ej. Visa Platinum Bancolombia"
+            />
+            @if (cardForm.get('name')?.touched && cardForm.get('name')?.invalid) {
+              <span class="form-error">Nombre requerido (mínimo 3 caracteres).</span>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="card-institution" class="form-label">Institución *</label>
+              <select id="card-institution" class="form-select" formControlName="institutionId">
+                <option value="inst-banco-occidente">Banco de Occidente</option>
+                <option value="inst-bancolombia">Bancolombia</option>
+                <option value="inst-davivienda">Davivienda</option>
+                <option value="inst-nequi">Nequi</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="card-limit" class="form-label">Cupo Total Aprobado ($ COP) *</label>
+              <input
+                id="card-limit"
+                type="number"
+                class="form-input"
+                formControlName="approvedCreditLimit"
+                placeholder="10000000"
+                min="100000"
+              />
+              @if (cardForm.get('approvedCreditLimit')?.touched && cardForm.get('approvedCreditLimit')?.invalid) {
+                <span class="form-error">Cupo requerido (mínimo $100.000).</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-row rate-row">
+            <div class="form-group">
+              <label for="card-rate-type" class="form-label">Tipo de Tasa *</label>
+              <select id="card-rate-type" class="form-select" formControlName="rateType">
+                <option value="EA">Efectiva Anual (% EA)</option>
+                <option value="NMV">Nominal Mes Vencido (% NMV)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="card-rate-val" class="form-label">Tasa de Interés (%) *</label>
+              <input
+                id="card-rate-val"
+                type="number"
+                step="0.01"
+                class="form-input"
+                formControlName="rateValue"
+                placeholder="24.8"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="card-cutoff" class="form-label">Día de Corte (1-31) *</label>
+              <input
+                id="card-cutoff"
+                type="number"
+                class="form-input"
+                formControlName="statementCutoffDay"
+                placeholder="18"
+                min="1"
+                max="31"
+              />
+            </div>
+            <div class="form-group">
+              <label for="card-due" class="form-label">Día Límite de Pago (1-31) *</label>
+              <input
+                id="card-due"
+                type="number"
+                class="form-input"
+                formControlName="paymentDueDay"
+                placeholder="5"
+                min="1"
+                max="31"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="card-fee" class="form-label">Cuota de Manejo Mensual ($ COP)</label>
+            <input
+              id="card-fee"
+              type="number"
+              class="form-input"
+              formControlName="managementFeeMonthly"
+              placeholder="32000"
+              min="0"
+            />
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeCreateCardModal()">Cancelar</button>
+            <button
+              type="submit"
+              class="btn-primary"
+              data-testid="btn-submit-card"
+              [disabled]="isSubmitting() || cardForm.invalid"
+            >
+              {{ isSubmitting() ? 'Registrando...' : 'Guardar Tarjeta' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Registrar Compra Diferida -->
+  @if (showAddPurchaseModal() && selectedCardForPurchase(); as card) {
+    <div class="modal-backdrop" (click)="closeAddPurchaseModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-purchase-title">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3 id="modal-purchase-title" class="modal-title">Registrar Compra Diferida</h3>
+            <p class="modal-subtitle">Tarjeta: {{ card.name }} (Disponible: {{ formatMoney(card.availableCreditLimit ?? 0) }})</p>
+          </div>
+          <button type="button" class="modal-close" (click)="closeAddPurchaseModal()" aria-label="Cerrar ventana">
+            <app-icon name="x" [size]="18" />
+          </button>
+        </div>
+
+        <form [formGroup]="purchaseForm" (ngSubmit)="submitCreatePurchase()" class="modal-form">
+          <div class="form-group">
+            <label for="purchase-desc" class="form-label">Descripción del Bien o Servicio *</label>
+            <input
+              id="purchase-desc"
+              type="text"
+              class="form-input"
+              formControlName="description"
+              placeholder="Ej. Tiquetes aéreos, MacBook Pro"
+            />
+            @if (purchaseForm.get('description')?.touched && purchaseForm.get('description')?.invalid) {
+              <span class="form-error">Descripción requerida (mínimo 3 caracteres).</span>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="purchase-amount" class="form-label">Valor de la Compra ($ COP) *</label>
+              <input
+                id="purchase-amount"
+                type="number"
+                class="form-input"
+                formControlName="amount"
+                placeholder="1500000"
+                min="1000"
+              />
+              @if (purchaseForm.get('amount')?.touched && purchaseForm.get('amount')?.invalid) {
+                <span class="form-error">Monto requerido mayor a $1.000.</span>
+              }
+            </div>
+            <div class="form-group">
+              <label for="purchase-installments" class="form-label">Número de Cuotas (1-48) *</label>
+              <input
+                id="purchase-installments"
+                type="number"
+                class="form-input"
+                formControlName="totalInstallments"
+                placeholder="12"
+                min="1"
+                max="48"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="purchase-date" class="form-label">Fecha de Compra *</label>
+              <input
+                id="purchase-date"
+                type="date"
+                class="form-input"
+                formControlName="purchaseDate"
+              />
+            </div>
+            <div class="form-group">
+              <label for="purchase-rate" class="form-label">Tasa Mensual Específica (% NMV, Opcional)</label>
+              <input
+                id="purchase-rate"
+                type="number"
+                step="0.01"
+                class="form-input"
+                formControlName="customRate"
+                placeholder="Dejar en blanco para usar tasa de tarjeta"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" (click)="closeAddPurchaseModal()">Cancelar</button>
+            <button
+              type="submit"
+              class="btn-primary"
+              data-testid="btn-submit-purchase"
+              [disabled]="isSubmitting() || purchaseForm.invalid"
+            >
+              {{ isSubmitting() ? 'Registrando...' : 'Confirmar Compra' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

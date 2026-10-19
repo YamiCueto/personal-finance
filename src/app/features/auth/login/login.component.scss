@@ -1,27 +1,27 @@
-// Mobile-First Financial Vault Theme (360px–430px baseline)
+// Rediseño visual Login — Tokens dark/amber
 .login-viewport {
   min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem 1rem;
-  background-color: #090d16;
-  color: #f8fafc;
+  padding: 1.5rem 1rem;
+  background-color: var(--bg);
+  color: var(--t1);
   box-sizing: border-box;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
-  background: #111827;
-  border: 1px solid #1f293d;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--rlg);
+  padding: 1.75rem 1.5rem;
   box-sizing: border-box;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
 
   @media (min-width: 768px) {
-    padding: 2.25rem 2rem;
+    padding: 2.5rem 2.25rem;
   }
 }
 
@@ -35,14 +35,14 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0.625rem;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-dim);
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #38bdf8;
+  color: var(--amber);
   margin-bottom: 0.75rem;
 }
 
@@ -50,26 +50,40 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #38bdf8;
+  background-color: var(--amber);
 }
 
 .vault-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin: 0 0 0.5rem 0;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
 
-  @media (min-width: 400px) {
-    font-size: 1.625rem;
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--t1);
+    line-height: 1.1;
+
+    em {
+      color: var(--amber);
+      font-style: normal;
+    }
+  }
+
+  .vault-subtitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--t2);
   }
 }
 
 .vault-description {
   font-size: 0.875rem;
   line-height: 1.45;
-  color: #94a3b8;
+  color: var(--t2);
   margin: 0;
 }
 
@@ -79,7 +93,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.875rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--rsm);
   margin-bottom: 1.25rem;
   font-size: 0.875rem;
   line-height: 1.4;
@@ -103,12 +117,12 @@
 }
 
 .alert-error {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--red-bg);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #fca5a5;
 
   .alert-icon {
-    stroke: #ef4444;
+    stroke: var(--red);
   }
 }
 
@@ -126,9 +140,9 @@
 }
 
 .field-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--t2);
 }
 
 .input-wrapper {
@@ -140,32 +154,32 @@
 
 .field-input {
   width: 100%;
-  min-height: 48px;
+  min-height: var(--touch);
   padding: 0.75rem 1rem;
   box-sizing: border-box;
-  background-color: #090d16;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  color: #ffffff;
-  font-size: 1rem;
+  background-color: var(--s2);
+  border: 1px solid var(--bd);
+  border-radius: var(--rsm);
+  color: var(--t1);
+  font-size: 0.9375rem;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
   &::placeholder {
-    color: #64748b;
+    color: var(--t3);
   }
 
   &:focus {
     outline: none;
-    border-color: #38bdf8;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    border-color: var(--amber);
+    box-shadow: 0 0 0 3px var(--amber-bg);
   }
 
   &.input-invalid {
-    border-color: #ef4444;
+    border-color: var(--red);
 
     &:focus {
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+      box-shadow: 0 0 0 3px var(--red-bg);
     }
   }
 }
@@ -173,7 +187,7 @@
 .btn-toggle-visibility {
   position: absolute;
   right: 6px;
-  min-height: 44px;
+  min-height: 38px;
   min-width: 44px;
   display: inline-flex;
   align-items: center;
@@ -181,7 +195,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #94a3b8;
+  color: var(--t2);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -189,20 +203,47 @@
   transition: color 0.15s ease;
 
   &:hover {
-    color: #ffffff;
+    color: var(--t1);
   }
 
   &:focus-visible {
-    outline: 2px solid #38bdf8;
+    outline: 2px solid var(--amber);
     outline-offset: -1px;
   }
 }
 
 .field-error {
   font-size: 0.8125rem;
-  color: #f87171;
+  color: var(--red);
   margin: 0;
   font-weight: 500;
+}
+
+.form-assist {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.25rem;
+  margin-bottom: 0.5rem;
+
+  .link-assist {
+    color: var(--amber);
+    font-size: 0.8125rem;
+    text-decoration: none;
+    font-weight: 500;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--amber);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
 }
 
 .form-action {
@@ -211,27 +252,28 @@
 
 .btn-primary {
   width: 100%;
-  min-height: 48px;
+  min-height: var(--touch);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.25rem;
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--amber);
+  color: #0C1018;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--rsm);
+  font-family: var(--font-display);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: background-color 0.15s ease, opacity 0.15s ease;
 
   &:hover:not(:disabled) {
-    background-color: #0369a1;
+    background-color: var(--amber-hover);
   }
 
   &:focus-visible {
-    outline: 2px solid #ffffff;
+    outline: 2px solid var(--t1);
     outline-offset: 2px;
   }
 
@@ -244,8 +286,8 @@
 .btn-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
+  border: 2px solid rgba(12, 16, 24, 0.3);
+  border-top-color: #0C1018;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -259,17 +301,17 @@
 .login-footer {
   margin-top: 1.5rem;
   text-align: center;
-  border-top: 1px solid #1f293d;
+  border-top: 1px solid var(--bd);
   padding-top: 1rem;
 }
 
 .footer-prompt {
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--t2);
   margin: 0;
 
   .link-action {
-    color: #38bdf8;
+    color: var(--amber);
     text-decoration: none;
     font-weight: 600;
     margin-left: 0.25rem;
@@ -279,7 +321,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid #38bdf8;
+      outline: 2px solid var(--amber);
       outline-offset: 2px;
       border-radius: 2px;
     }

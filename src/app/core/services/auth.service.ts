@@ -1,7 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthError, Session, User } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
-import { SignInResult, SignUpResult } from '../models/auth.model';
+import {
+  PasswordRecoveryResult,
+  PasswordUpdateResult,
+  SignInResult,
+  SignUpResult,
+} from '../models/auth.model';
+import { AUTH_MESSAGES } from '../config/auth-messages.config';
 
 /**
  * Client-Side Authentication Service.
@@ -100,7 +106,7 @@ export class AuthService {
       const message =
         err instanceof Error
           ? err.message
-          : 'Unable to connect to authentication service. Please check your network connection.';
+          : AUTH_MESSAGES.ERRORS.NETWORK_ERROR;
       return {
         success: false,
         user: null,
@@ -151,7 +157,7 @@ export class AuthService {
       const message =
         err instanceof Error
           ? err.message
-          : 'Unable to connect to authentication service. Please check your network connection.';
+          : AUTH_MESSAGES.ERRORS.NETWORK_ERROR;
       return {
         success: false,
         user: null,
@@ -174,23 +180,88 @@ export class AuthService {
     }
   }
 
+  async resetPasswordForEmail(email: string, redirectTo?: string): Promise<PasswordRecoveryResult> {
+    try {
+      const redirectUri = redirectTo || new URL('auth/reset-password', document.baseURI).href;
+      const { error } = await this.supabaseService.clientInstance.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: redirectUri,
+        }
+      );
+
+      if (error) {
+        return {
+          success: false,
+          error: this.normalizeAuthError(error),
+        };
+      }
+
+      return {
+        success: true,
+      };
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : AUTH_MESSAGES.ERRORS.NETWORK_ERROR;
+      return {
+        success: false,
+        error: message,
+      };
+    }
+  }
+
+  async updateUserPassword(password: string): Promise<PasswordUpdateResult> {
+    try {
+      const { data, error } = await this.supabaseService.clientInstance.auth.updateUser({
+        password,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          user: null,
+          error: this.normalizeAuthError(error),
+        };
+      }
+
+      this.currentUser.set(data.user);
+
+      return {
+        success: true,
+        user: data.user,
+      };
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : AUTH_MESSAGES.ERRORS.NETWORK_ERROR;
+      return {
+        success: false,
+        user: null,
+        error: message,
+      };
+    }
+  }
+
   private normalizeAuthError(error: AuthError): string {
     switch (error.code) {
       case 'invalid_credentials':
       case 'invalid_grant':
-        return 'Invalid email or password. Please verify your credentials.';
+        return AUTH_MESSAGES.ERRORS.INVALID_CREDENTIALS;
       case 'email_not_confirmed':
-        return 'Please confirm your email address before signing in.';
+        return AUTH_MESSAGES.ERRORS.EMAIL_NOT_CONFIRMED;
       case 'user_already_exists':
-        return 'An account with this email address already exists.';
+        return AUTH_MESSAGES.ERRORS.USER_ALREADY_EXISTS;
       case 'weak_password':
-        return 'Password must be at least 8 characters and contain letters and numbers.';
+        return AUTH_MESSAGES.ERRORS.WEAK_PASSWORD;
       case 'over_email_send_rate_limit':
-        return 'Rate limit reached. Please wait a few moments before trying again.';
+        return AUTH_MESSAGES.ERRORS.RATE_LIMIT;
       case 'validation_failed':
-        return error.message || 'Please provide a valid email and password.';
+        return error.message || AUTH_MESSAGES.ERRORS.GENERIC_FAILURE;
       default:
-        return error.message || 'Authentication request failed. Please try again.';
+        return error.message || AUTH_MESSAGES.ERRORS.GENERIC_FAILURE;
     }
   }
 }

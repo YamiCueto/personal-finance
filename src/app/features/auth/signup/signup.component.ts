@@ -93,14 +93,14 @@ export class SignupComponent {
       if (result.success) {
         if (result.requiresEmailConfirmation) {
           this.successMessage.set(
-            'Account registration initiated! A confirmation email has been dispatched. Please verify your address to activate your vault.'
+            '¡Registro de cuenta iniciado! Te hemos enviado un correo de confirmación. Por favor verifica tu dirección para activar tu bóveda.'
           );
         } else {
-          this.successMessage.set('Account registered successfully! Welcome to your personal vault.');
+          this.successMessage.set('¡Cuenta registrada exitosamente! Bienvenido a tu bóveda personal.');
         }
         this.signupForm.reset();
       } else {
-        this.errorMessage.set(result.error || 'Registration failed. Please check your credentials and try again.');
+        this.errorMessage.set(result.error || 'Error en el registro. Por favor verifica tus datos e intenta nuevamente.');
       }
     } finally {
       this.isSubmitting.set(false);

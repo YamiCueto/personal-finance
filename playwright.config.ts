@@ -51,6 +51,13 @@ export default defineConfig({
       },
     },
     {
+      name: 'mobile-440',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 440, height: 956 },
+      },
+    },
+    {
       name: 'tablet-768',
       use: {
         ...devices['Desktop Chrome'],
@@ -58,10 +65,36 @@ export default defineConfig({
       },
     },
     {
+      name: 'desktop-1024',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1024, height: 768 },
+      },
+    },
+    {
       name: 'desktop-1440',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: 'desktop-1920',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+      },
+    },
+    {
+      name: 'webkit-mobile-390',
+      use: {
+        ...devices['iPhone 14'],
+      },
+    },
+    {
+      name: 'webkit-mobile-430',
+      use: {
+        ...devices['iPhone 14 Plus'],
       },
     },
   ],

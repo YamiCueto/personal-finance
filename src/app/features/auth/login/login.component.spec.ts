@@ -74,7 +74,7 @@ describe('LoginComponent', () => {
       success: false,
       user: null,
       session: null,
-      error: 'Invalid email or password. Please verify your credentials.',
+      error: 'Correo o contraseña incorrectos. Por favor verifica tus credenciales.',
     });
 
     component.loginForm.setValue({
@@ -84,7 +84,7 @@ describe('LoginComponent', () => {
 
     await component.onSubmit();
 
-    expect(component.errorMessage()).toContain('Invalid email or password');
+    expect(component.errorMessage()).toContain('Correo o contraseña incorrectos');
     expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
 

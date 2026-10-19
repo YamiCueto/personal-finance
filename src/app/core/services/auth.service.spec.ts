@@ -74,7 +74,7 @@ describe('AuthService', () => {
     const result = await service.signUp('existing@example.com', 'SecureP@ss123');
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('already exists');
+    expect(result.error).toContain('Ya existe una cuenta');
   });
 
   it('should handle successful login with password', async () => {
@@ -101,7 +101,7 @@ describe('AuthService', () => {
     const result = await service.signInWithPassword('owner@example.com', 'WrongPass1');
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Invalid email or password');
+    expect(result.error).toContain('Correo o contraseña incorrectos');
     expect(service.isAuthenticated()).toBe(false);
   });
 
@@ -116,5 +116,33 @@ describe('AuthService', () => {
     expect(service.currentUser()).toBeNull();
     expect(service.currentSession()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
+  });
+
+  it('should call resetPasswordForEmail with trimmed email and default redirect', async () => {
+    (mockSupabaseService.clientInstance as any).auth.resetPasswordForEmail = vi
+      .fn()
+      .mockResolvedValue({ error: null });
+
+    const result = await service.resetPasswordForEmail('  test@example.com  ');
+
+    expect(result.success).toBe(true);
+    expect(
+      (mockSupabaseService.clientInstance as any).auth.resetPasswordForEmail
+    ).toHaveBeenCalledWith('test@example.com', {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+  });
+
+  it('should call updateUser with new password', async () => {
+    const updatedUser = { id: 'usr-123', email: 'user@example.com' };
+    (mockSupabaseService.clientInstance as any).auth.updateUser = vi
+      .fn()
+      .mockResolvedValue({ data: { user: updatedUser }, error: null });
+
+    const result = await service.updateUserPassword('NewPassword123!');
+
+    expect(result.success).toBe(true);
+    expect(result.user).toEqual(updatedUser as any);
+    expect(service.currentUser()).toEqual(updatedUser as any);
   });
 });
