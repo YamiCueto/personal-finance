@@ -180,7 +180,7 @@
 
   <!-- Modal: Crear Tarjeta de Crédito -->
   @if (showCreateCardModal()) {
-    <div class="modal-backdrop" (click)="closeCreateCardModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeCreateCardModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-card-title">
         <div class="modal-header">
           <h3 id="modal-card-title" class="modal-title">Registrar Tarjeta de Crédito</h3>
@@ -310,7 +310,7 @@
 
   <!-- Modal: Registrar Compra Diferida -->
   @if (showAddPurchaseModal() && selectedCardForPurchase(); as card) {
-    <div class="modal-backdrop" (click)="closeAddPurchaseModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeAddPurchaseModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-purchase-title">
         <div class="modal-header">
           <div class="modal-title-wrap">

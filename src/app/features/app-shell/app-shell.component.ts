@@ -1,5 +1,6 @@
+import { MotionValueDirective } from '../../shared/motion/motion-value.directive';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -22,6 +23,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
   selector: 'app-app-shell',
   standalone: true,
   imports: [
+    MotionValueDirective,
     BrandLogoComponent,
     CommonModule,
     ReactiveFormsModule,
@@ -40,6 +42,21 @@ export class AppShellComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   readonly financialFacade = inject(FinancialFacade);
+
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private themeTimer: ReturnType<typeof setTimeout> | undefined;
+  private sidebarFrame = 0;
+  private sidebarAnimations: Animation[] = [];
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.themeTimer);
+      document.documentElement.classList.remove('theme-motion');
+      cancelAnimationFrame(this.sidebarFrame);
+      this.sidebarAnimations.forEach(animation => animation.cancel());
+    });
+  }
 
   readonly user = this.authService.currentUser;
 
@@ -122,6 +139,9 @@ export class AppShellComponent implements OnInit {
   );
 
   toggleTheme(): void {
+    document.documentElement.classList.add('theme-motion');
+    clearTimeout(this.themeTimer);
+    this.themeTimer = setTimeout(() => document.documentElement.classList.remove('theme-motion'), 300);
     this.theme.update(value => value === 'light' ? 'dark' : 'light');
     document.documentElement.dataset['theme'] = this.theme();
     document.querySelectorAll('meta[name="theme-color"]').forEach(meta =>
@@ -198,7 +218,21 @@ export class AppShellComponent implements OnInit {
   }
 
   toggleSidebar(): void {
+    const main = this.element.nativeElement.querySelector<HTMLElement>('.app-main-wrapper');
+    const before = main?.getBoundingClientRect().left ?? 0;
+    this.sidebarAnimations.forEach(animation => animation.cancel());
+    cancelAnimationFrame(this.sidebarFrame);
     this.isSidebarCollapsed.update((v) => !v);
+    if (!main || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.sidebarFrame = requestAnimationFrame(() => {
+      const duration = parseFloat(getComputedStyle(main).getPropertyValue('--motion-state')) || 220;
+      this.sidebarAnimations = [main.animate([
+        { transform: `translateX(${before - main.getBoundingClientRect().left}px)` },
+        { transform: 'translateX(0)' },
+      ], { duration, easing: 'cubic-bezier(.2,.8,.2,1)' })];
+      const nav = this.element.nativeElement.querySelector<HTMLElement>('.sidebar-nav');
+      if (nav) this.sidebarAnimations.push(nav.animate([{ opacity: .65 }, { opacity: 1 }], { duration }));
+    });
   }
 
   toggleMobileMore(): void {

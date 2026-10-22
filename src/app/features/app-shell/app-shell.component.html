@@ -276,7 +276,7 @@
         <div class="kpi-card real-balance">
           <span class="kpi-icon"><app-icon name="bank" [size]="19" /></span>
           <span class="kpi-label">Saldo disponible</span>
-          <strong class="kpi-value tabular-nums">{{ totalLiquidBalance() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+          <strong class="kpi-value tabular-nums" [appMotionValue]="totalLiquidBalance()" #amount0="motionValue" [attr.data-amount]="totalLiquidBalance() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO'"><span class="visually-hidden">{{ totalLiquidBalance() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span><span aria-hidden="true">{{ amount0.value() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span></strong>
           <span class="kpi-sub">Total líquido disponible en cuentas</span>
         </div>
 
@@ -284,9 +284,9 @@
         <div class="kpi-card free-capital">
           <span class="kpi-icon"><app-icon name="waterfall" [size]="19" /></span>
           <span class="kpi-label">Libre este mes</span>
-          <strong class="kpi-value tabular-nums" [class.negative]="totalFreeProjected() < 0">
-            {{ totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
-          </strong>
+          <strong class="kpi-value tabular-nums" [class.negative]="totalFreeProjected() < 0" [appMotionValue]="totalFreeProjected()" #amount1="motionValue" [attr.data-amount]="totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO'"><span class="visually-hidden">{{ totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span><span aria-hidden="true">
+            {{ amount1.value() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+          </span></strong>
           <span class="kpi-sub">Ingresos menos compromisos del mes</span>
         </div>
 
@@ -294,9 +294,9 @@
         <div class="kpi-card projected-liquidity">
           <span class="kpi-icon"><app-icon name="incomes" [size]="19" /></span>
           <span class="kpi-label">Liquidez Proyectada</span>
-          <strong class="kpi-value tabular-nums" [class.negative]="projectedLiquidity() < 0">
-            {{ projectedLiquidity() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
-          </strong>
+          <strong class="kpi-value tabular-nums" [class.negative]="projectedLiquidity() < 0" [appMotionValue]="projectedLiquidity()" #amount2="motionValue" [attr.data-amount]="projectedLiquidity() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO'"><span class="visually-hidden">{{ projectedLiquidity() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span><span aria-hidden="true">
+            {{ amount2.value() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+          </span></strong>
           <span class="kpi-sub">Saldo en cuentas - Obligaciones pendientes</span>
         </div>
 
@@ -304,9 +304,9 @@
         <div class="kpi-card principal-debt">
           <span class="kpi-icon"><app-icon name="credit-card" [size]="19" /></span>
           <span class="kpi-label">Deuda de capital</span>
-          <strong class="kpi-value tabular-nums text-amber" data-testid="dashboard-total-debt">
-            {{ totalPrincipalDebt() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
-          </strong>
+          <strong class="kpi-value tabular-nums text-amber" data-testid="dashboard-total-debt" [appMotionValue]="totalPrincipalDebt()" #amount3="motionValue" [attr.data-amount]="totalPrincipalDebt() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO'"><span class="visually-hidden">{{ totalPrincipalDebt() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span><span aria-hidden="true">
+            {{ amount3.value() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
+          </span></strong>
           <span class="kpi-sub">{{ loans().length }} créditos • {{ creditCards().length }} tarjetas activas</span>
         </div>
       </div>
@@ -351,8 +351,8 @@
         <article class="payment-progress">
           <div class="overview-card-heading"><h2>Tu mes, en marcha</h2><span class="section-marker">01 / SEGUIMIENTO</span></div>
           <div class="progress-content">
-            <div class="progress-ring" [style.--progress]="paidPercentage() + '%'" role="img" [attr.aria-label]="'Has pagado el ' + (paidPercentage() | number:'1.0-0') + '% de las obligaciones del mes'">
-              <div><strong>{{ paidPercentage() | number:'1.0-0' }}<small>%</small></strong><span>pagado</span></div>
+            <div class="progress-ring" [appMotionValue]="paidPercentage()" motionToken="--motion-indicator" #progress="motionValue" [style.--progress]="progress.value() + '%'" role="img" [attr.aria-label]="'Has pagado el ' + (paidPercentage() | number:'1.0-0') + '% de las obligaciones del mes'">
+              <div><strong aria-hidden="true">{{ progress.value() | number:'1.0-0' }}<small>%</small></strong><span>pagado</span></div>
             </div>
             <div class="progress-detail">
               <p>{{ totalMonthlyObligations() > 0 ? 'Cada pago es un paso adelante.' : 'Tu mes empieza aquí.' }}</p>
@@ -658,7 +658,7 @@
 
     <!-- Menú Desplegable 'Más' para Móvil -->
     @if (showMobileMoreMenu()) {
-      <div class="mobile-more-backdrop" (click)="closeMobileMore()">
+      <div class="mobile-more-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeMobileMore()">
         <div class="mobile-more-sheet" (click)="$event.stopPropagation()" role="dialog" aria-label="Más funcionalidades">
           <div class="more-sheet-header">
             <span class="sheet-title">Otras Funcionalidades</span>
@@ -727,7 +727,7 @@
   <!-- ── 6. MODALES DEL SISTEMA FINANCIERO ────────────────────────────── -->
   <!-- Modal: Crear Cuenta -->
   @if (showAccountModal()) {
-    <div class="modal-backdrop" (click)="closeAccountModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeAccountModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-acc-title">
         <div class="modal-header">
           <h3 id="modal-acc-title" class="modal-title">Nueva Cuenta Financiera</h3>
@@ -771,7 +771,7 @@
 
   <!-- Modal: Registrar Ingreso -->
   @if (showIncomeModal()) {
-    <div class="modal-backdrop" (click)="closeIncomeModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeIncomeModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-inc-title">
         <div class="modal-header">
           <h3 id="modal-inc-title" class="modal-title">Registrar Ingreso en {{ monthsList[selectedMonth() - 1].label }}</h3>
@@ -823,7 +823,7 @@
 
   <!-- Modal: Crear Obligación -->
   @if (showObligationModal()) {
-    <div class="modal-backdrop" (click)="closeObligationModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeObligationModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-ob-title">
         <div class="modal-header">
           <h3 id="modal-ob-title" class="modal-title">Nueva Obligación Financiera (Deducción)</h3>
@@ -880,7 +880,7 @@
 
   <!-- Modal: Registrar Pago de Obligación -->
   @if (showPaymentModal()) {
-    <div class="modal-backdrop" (click)="closePaymentModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closePaymentModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-pay-title">
         <div class="modal-header">
           <h3 id="modal-pay-title" class="modal-title">Pagar Obligación: {{ selectedObligationForPayment()?.name }}</h3>

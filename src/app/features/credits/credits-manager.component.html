@@ -124,7 +124,7 @@
 
   <!-- Modal: Crear Nuevo Crédito -->
   @if (showCreateModal()) {
-    <div class="modal-backdrop" (click)="closeCreateModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeCreateModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-credit-title">
         <div class="modal-header">
           <h3 id="modal-credit-title" class="modal-title">Registrar Nuevo Crédito</h3>
@@ -275,7 +275,7 @@
 
   <!-- Modal: Tabla de Amortización Completa -->
   @if (showScheduleModal() && selectedCreditForSchedule(); as credit) {
-    <div class="modal-backdrop" (click)="closeScheduleModal()">
+    <div class="modal-backdrop" animate.enter="overlay-enter" animate.leave="overlay-leave" (click)="closeScheduleModal()">
       <div class="modal-card modal-large" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="modal-sched-title">
         <div class="modal-header">
           <div class="modal-title-wrap">

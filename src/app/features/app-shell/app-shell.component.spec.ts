@@ -106,6 +106,29 @@ describe('AppShellComponent', () => {
     expect(component.actionSuccess()).toContain('creada por');
   });
 
+  it('keeps payment confirmation pending until success and prevents duplicate submissions', async () => {
+    component.obligationForm.patchValue({ name: 'Pago diferido', amount: 1000, sourceType: 'RECURRENT_EXPENSE' });
+    await component.saveObligation();
+    const obligation = component.obligations().find(value => value.name === 'Pago diferido')!;
+    const record = component.financialFacade.recordPayment.bind(component.financialFacade);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const operation = vi.spyOn(component.financialFacade, 'recordPayment').mockImplementation(async input => {
+      await gate;
+      return record(input);
+    });
+    component.openPaymentModal(obligation);
+    const pending = component.submitPayment();
+    await component.submitPayment();
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(component.actionSuccess()).toBeNull();
+    expect(component.showPaymentModal()).toBe(true);
+    release();
+    await pending;
+    expect(component.actionSuccess()).toBeTruthy();
+    expect(component.showPaymentModal()).toBe(false);
+  });
+
   it('should process a partial and full payment of an obligation and update pending balance', async () => {
     // 1. Crear una obligación para pagar
     component.obligationForm.patchValue({

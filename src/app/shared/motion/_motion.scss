@@ -1,0 +1,67 @@
+@mixin styles {
+  :root {
+    --motion-micro: 120ms;
+    --motion-hover: 180ms;
+    --motion-state: 220ms;
+    --motion-entry: 320ms;
+    --motion-view: 260ms;
+    --motion-number: 600ms;
+    --motion-indicator: 700ms;
+    --motion-brand: 800ms;
+    --motion-step: 50ms;
+    --ease-out: cubic-bezier(.2, .8, .2, 1);
+    --ease-in: cubic-bezier(.4, 0, 1, 1);
+    --ease-state: cubic-bezier(.4, 0, .2, 1);
+  }
+
+  @keyframes braviso-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes braviso-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes braviso-exit { to { opacity: 0; } }
+  @keyframes braviso-panel-exit { to { opacity: 0; transform: translateY(6px); } }
+  @keyframes braviso-mark { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+  @keyframes braviso-wordmark { from { opacity: 0; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0); } }
+
+  app-brand-logo .brand-mark { transform-origin: 32px 32px; }
+  app-brand-logo.brand-intro .brand-mark { animation: braviso-mark var(--motion-brand) var(--ease-out) both; }
+  app-brand-logo.brand-intro .brand-wordmark { animation: braviso-wordmark var(--motion-brand) var(--ease-out) both; }
+  app-brand-logo svg { transition: transform var(--motion-hover) var(--ease-out); }
+
+  .page-intro { animation: braviso-reveal var(--motion-entry) var(--ease-out) both; }
+  .kpi-card { animation: braviso-reveal var(--motion-entry) var(--ease-out) both; }
+  @for $i from 1 through 4 { .kpi-card:nth-child(#{$i}) { animation-delay: calc(var(--motion-step) * #{$i}); } }
+  .metric-ribbon { animation: braviso-reveal var(--motion-entry) calc(var(--motion-step) * 5) var(--ease-out) both; }
+  .overview-grid { animation: braviso-reveal var(--motion-entry) calc(var(--motion-step) * 6) var(--ease-out) both; }
+  .tab-panel, app-credits-manager, app-credit-cards-manager, app-financial-simulators { animation: braviso-reveal var(--motion-view) var(--ease-out) both; }
+  .app-layout { overflow-x: clip; }
+  .kpi-value { min-height: 1.1em; }
+
+  button:not(:disabled), a, input, select, textarea {
+    transition: transform var(--motion-hover) var(--ease-out), background-color var(--motion-hover) var(--ease-state), color var(--motion-hover) var(--ease-state), border-color var(--motion-hover) var(--ease-state), box-shadow var(--motion-hover) var(--ease-state);
+  }
+  button:not(:disabled):active { transform: translateY(1px) scale(.985); transition-duration: var(--motion-micro); }
+  .nav-link, .month-pill { position: relative; }
+  .nav-link::after { content: ''; position: absolute; left: 0; top: 30%; bottom: 30%; width: 2px; border-radius: 2px; background: var(--accent); transform: scaleY(0); transition: transform var(--motion-state) var(--ease-out); }
+  .nav-link.active::after { transform: scaleY(1); }
+  .month-pill::after { content: ''; position: absolute; inset: auto 25% 3px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0; transform: scaleX(.2); transition: transform var(--motion-state) var(--ease-out), opacity var(--motion-state); }
+  .month-pill.active::after { opacity: .5; transform: scaleX(1); }
+  .month-selector { overscroll-behavior-x: contain; scroll-behavior: smooth; }
+  .overlay-enter { animation: braviso-fade var(--motion-state) var(--ease-out) both; }
+  .overlay-enter > :is(.modal-card, .mobile-more-sheet) { animation: braviso-reveal var(--motion-state) var(--ease-out) both; }
+  .overlay-leave { pointer-events: none; animation: braviso-exit var(--motion-hover) var(--ease-in) both; }
+  .overlay-leave > :is(.modal-card, .mobile-more-sheet) { animation: braviso-panel-exit var(--motion-hover) var(--ease-in) both; }
+  .alert-banner, .field-error, .error-message { animation: braviso-reveal var(--motion-state) var(--ease-out) both; }
+  .alert-banner.success app-icon { animation: braviso-mark var(--motion-entry) var(--ease-out) both; }
+
+  :root.theme-motion, :root.theme-motion * {
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+    transition-duration: var(--motion-view);
+    transition-timing-function: var(--ease-state);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    app-brand-logo:hover svg { transform: translateY(-1px); }
+    :is(.upcoming-row, .more-option-card, .btn-quick-action):not(:disabled):hover { transform: translateY(-1px); border-color: var(--accent); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+}
