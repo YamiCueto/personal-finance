@@ -1,153 +1,66 @@
-/* ── Google Fonts: Syne (Display), Inter (Body), DM Mono (Numbers) ── */
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+@use './app/features/app-shell/overview';
+/* Personal — calm surfaces, forest accents, editorial hierarchy. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Mono:wght@400;500&display=swap');
+@include overview.styles;
 
-/* ── DESIGN TOKENS — Dark First (Default) ─────────────────────────── */
 :root {
-  /* Superficies */
-  --bg: #0C1018;
-  --s1: #131A26;
-  --s2: #1A2234;
-  --s3: #212B3C;
-  --bd: #243047;
-  --bd2: #1A2535;
-
-  /* Aliases --pf-* para compatibilidad con spec UX-01 */
-  --pf-bg: var(--bg);
-  --pf-s1: var(--s1);
-  --pf-s2: var(--s2);
-  --pf-s3: var(--s3);
-  --pf-bd: var(--bd);
-  --pf-bd2: var(--bd2);
-
-  /* Acento principal: Ámbar */
-  --amber: #D4A017;
-  --amber-hover: #E5B228;
-  --amber-bg: rgba(212, 160, 23, 0.12);
-  --amber-dim: rgba(212, 160, 23, 0.28);
-  --pf-amber: var(--amber);
-  --pf-amber-bg: var(--amber-bg);
-  --pf-amber-dim: var(--amber-dim);
-
-  /* Semánticos */
-  --green: #22C55E;
-  --green-bg: rgba(34, 197, 94, 0.12);
-  --pf-green: var(--green);
-  --pf-green-bg: var(--green-bg);
-
-  --red: #EF4444;
-  --red-bg: rgba(239, 68, 68, 0.12);
-  --pf-red: var(--red);
-  --pf-red-bg: var(--red-bg);
-
-  --cyan: #06B6D4;
-  --cyan-bg: rgba(6, 182, 212, 0.12);
-
-  /* Texto */
-  --t1: #EDF0F4;
-  --t2: #8894A4;
-  --t3: #4A5568;
-  --pf-t1: var(--t1);
-  --pf-t2: var(--t2);
-  --pf-t3: var(--t3);
-
-  /* Tipografía */
-  --font-display: 'Syne', system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg: #f5f5ef;
+  --s1: #ffffff;
+  --s2: #f0f2ea;
+  --s3: #e6ebdf;
+  --bd: #d9dfd3;
+  --bd2: #e9ece3;
+  --t1: #233c32;
+  --t2: #5e6e62;
+  --t3: #6d776c;
+  --accent: #285444;
+  --accent-soft: #e8efdf;
+  --on-accent: #ffffff;
+  --amber: var(--accent);
+  --amber-hover: #1c4033;
+  --amber-bg: var(--accent-soft);
+  --amber-dim: #b7c9a9;
+  --green: #34714b;
+  --green-bg: #eaf3e6;
+  --red: #ad483c;
+  --red-bg: #faece6;
+  --cyan: #3c7080;
+  --cyan-bg: #e8f1f4;
+  --font-display: 'DM Sans', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
   --font-mono: 'DM Mono', monospace;
-  --pf-font-display: var(--font-display);
-  --pf-font-body: var(--font-body);
-  --pf-font-mono: var(--font-mono);
-
-  /* Radios de borde */
-  --rsm: 8px;
-  --r: 12px;
-  --rlg: 18px;
-  --pf-rsm: var(--rsm);
-  --pf-r: var(--r);
-  --pf-rlg: var(--rlg);
-
-  /* Interacción y accesibilidad */
+  --font-editorial: Georgia, 'Times New Roman', serif;
+  --rsm: 10px;
+  --r: 16px;
+  --rlg: 22px;
   --touch: 44px;
-  --pf-touch: var(--touch);
-  --focus-ring: rgba(212, 160, 23, 0.4);
-
-  /* Compatibilidad previa */
-  --color-bg-base: var(--bg);
-  --color-surface-card: var(--s1);
-  --color-border: var(--bd);
-  --color-text-primary: var(--t1);
-  --color-text-secondary: var(--t2);
-  --color-accent: var(--amber);
-  --color-accent-light: var(--amber-hover);
-  --touch-target-min: var(--touch);
-
-  color-scheme: dark;
-}
-
-/* ── MODO CLARO ACCESIBLE (WCAG 4.5:1+) ────────────────────────────── */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #F4F6F9;
-    --s1: #FFFFFF;
-    --s2: #E8ECF2;
-    --s3: #DDE2EC;
-    --bd: #CFD7E6;
-    --bd2: #E1E6F0;
-
-    --amber: #B88100;
-    --amber-hover: #9E6F00;
-    --amber-bg: rgba(184, 129, 0, 0.12);
-    --amber-dim: rgba(184, 129, 0, 0.28);
-
-    --green: #15803D;
-    --green-bg: rgba(21, 128, 61, 0.12);
-
-    --red: #DC2626;
-    --red-bg: rgba(220, 38, 38, 0.12);
-
-    --cyan: #0E7490;
-    --cyan-bg: rgba(14, 116, 144, 0.12);
-
-    --t1: #0F172A;
-    --t2: #475569;
-    --t3: #94A3B8;
-
-    --focus-ring: rgba(184, 129, 0, 0.4);
-
-    color-scheme: light;
-  }
-}
-
-:root[data-theme="light"] {
-  --bg: #F4F6F9;
-  --s1: #FFFFFF;
-  --s2: #E8ECF2;
-  --s3: #DDE2EC;
-  --bd: #CFD7E6;
-  --bd2: #E1E6F0;
-
-  --amber: #B88100;
-  --amber-hover: #9E6F00;
-  --amber-bg: rgba(184, 129, 0, 0.12);
-  --amber-dim: rgba(184, 129, 0, 0.28);
-
-  --green: #15803D;
-  --green-bg: rgba(21, 128, 61, 0.12);
-
-  --red: #DC2626;
-  --red-bg: rgba(220, 38, 38, 0.12);
-
-  --cyan: #0E7490;
-  --cyan-bg: rgba(14, 116, 144, 0.12);
-
-  --t1: #0F172A;
-  --t2: #475569;
-  --t3: #94A3B8;
-
-  --focus-ring: rgba(184, 129, 0, 0.4);
-
+  --focus-ring: #789c6d;
+  --shadow: 0 8px 28px -16px #243c3226;
+  --pf-bg: var(--bg); --pf-s1: var(--s1); --pf-s2: var(--s2); --pf-s3: var(--s3);
+  --pf-bd: var(--bd); --pf-bd2: var(--bd2); --pf-t1: var(--t1); --pf-t2: var(--t2); --pf-t3: var(--t3);
+  --pf-amber: var(--amber); --pf-amber-bg: var(--amber-bg); --pf-amber-dim: var(--amber-dim);
+  --pf-green: var(--green); --pf-green-bg: var(--green-bg); --pf-red: var(--red); --pf-red-bg: var(--red-bg);
+  --pf-font-display: var(--font-display); --pf-font-body: var(--font-body); --pf-font-mono: var(--font-mono);
+  --pf-rsm: var(--rsm); --pf-r: var(--r); --pf-rlg: var(--rlg); --pf-touch: var(--touch);
+  --color-bg-base: var(--bg); --color-surface-card: var(--s1); --color-border: var(--bd);
+  --color-text-primary: var(--t1); --color-text-secondary: var(--t2); --color-accent: var(--amber); --color-accent-light: var(--amber-hover); --touch-target-min: var(--touch);
   color-scheme: light;
 }
+
+@mixin dark-palette {
+  --bg: #14251f; --s1: #1c3028; --s2: #243a30; --s3: #2e483b;
+  --bd: #415849; --bd2: #304739;
+  --t1: #f0f2e8; --t2: #bbc9bc; --t3: #a0b09f;
+  --accent: #d4e5aa; --accent-soft: #304631; --on-accent: #1c3028;
+  --amber-hover: #e3edc8; --amber-dim: #61774c;
+  --green: #aed39d; --green-bg: #2a4231;
+  --red: #f4aa96; --red-bg: #4a332b;
+  --cyan: #9ecbd1; --cyan-bg: #29414a;
+  --shadow: 0 8px 28px -16px #00000044;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { @include dark-palette; } }
+:root[data-theme="dark"] { @include dark-palette; }
 
 /* ── Reset Base y Normalización ──────────────────────────────────── */
 *, *::before, *::after {
@@ -244,7 +157,7 @@ h1, h2, h3, h4, h5, h6 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: rgba(17, 36, 28, 0.5);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -265,7 +178,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 24px 80px -20px rgba(17, 36, 28, 0.3);
 }
 
 .modal-header {
@@ -376,7 +289,7 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--amber);
     border: none;
     border-radius: var(--rsm);
-    color: #0C1018;
+    color: var(--on-accent);
     cursor: pointer;
     font-family: var(--font-display);
     font-weight: 700;
@@ -405,13 +318,13 @@ h1, h2, h3, h4, h5, h6 {
   &.error {
     background-color: var(--red-bg);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #fca5a5;
+    color: var(--red);
   }
 
   &.success {
     background-color: var(--green-bg);
     border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #86efac;
+    color: var(--green);
   }
 
   .alert-close {
@@ -745,7 +658,7 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.35rem;
     padding: 0.5rem 1rem;
     background-color: var(--amber);
-    color: #0C1018;
+    color: var(--on-accent);
     border: none;
     border-radius: var(--rsm);
     font-family: var(--font-display);
@@ -758,4 +671,42 @@ h1, h2, h3, h4, h5, h6 {
       background-color: var(--amber-hover);
     }
   }
+}
+
+/* Shared controls and financial surfaces */
+button, input, select, textarea { font-family: inherit; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button { touch-action: manipulation; }
+button:disabled { cursor: not-allowed; }
+button:not(:disabled), a, input, select, textarea { transition: background-color .18s, border-color .18s, box-shadow .18s; }
+::selection { background: var(--amber-dim); color: var(--t1); }
+.negative { color: var(--red); }
+.modal-header .modal-close, .alert-close { min-width: 44px; min-height: 44px; border-radius: 8px; }
+.modal-card { padding: 28px; }.modal-header { align-items: center; }
+.form-field .field-input { background: var(--s1); min-height: 48px; }
+.tab-panel-container { padding: 24px 36px 40px; }
+.panel-header .panel-title { font-size: 22px; font-weight: 550; letter-spacing: -.035em; }
+.panel-header .btn-primary-sm, .btn-action-pay { min-height: 44px; }
+.account-card, .obligation-card { box-shadow: var(--shadow); padding: 24px; }
+.account-card { border-top: 3px solid var(--amber-dim); }
+.account-card .acc-top { flex-direction: column; align-items: flex-start; gap: 16px; }
+.account-card .acc-balance .acc-val { font-family: var(--font-body); font-size: 28px; font-weight: 500; letter-spacing: -.04em; }
+.incomes-list { gap: 0; background: var(--s1); border: 1px solid var(--bd); border-radius: var(--r); overflow: hidden; }
+.incomes-list .income-row { border: 0; border-bottom: 1px solid var(--bd2); border-radius: 0; padding: 24px; gap: 16px; }
+.incomes-list .income-row:last-child { border-bottom: 0; }
+.income-row .inc-info { min-width: 0; overflow-wrap: anywhere; }
+.waterfall-list { gap: 0; border: 1px solid var(--bd); border-radius: var(--r); background: var(--s1); overflow: hidden; }
+.waterfall-milestone.start, .waterfall-milestone.end { border: 0; border-radius: 0; padding: 20px 24px; gap: 16px; }
+.waterfall-step { padding: 0 24px; }
+.waterfall-step .step-connector { display: none; }
+.waterfall-step .step-card { border: 0; border-bottom: 1px solid var(--bd2); border-radius: 0; padding: 20px 0; gap: 12px; min-width: 0; }
+.waterfall-step .step-card .step-meta .step-index { background: var(--s2); width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; flex-shrink: 0; }
+.waterfall-step .step-card .step-values { padding-left: 40px; gap: 12px; flex-wrap: wrap; }
+@media(max-width: 767px) {
+  .tab-panel-container { padding: 20px 16px 32px; }
+  .panel-header { flex-wrap: wrap; }.panel-header .panel-title { font-size: 20px; }
+  .account-card, .obligation-card { padding: 20px; }.modal-card { padding: 20px; }
+  .waterfall-step { padding: 0 16px; }.waterfall-step .step-card .step-values { padding-left: 0; }
+  .waterfall-milestone { flex-wrap: wrap; }.waterfall-milestone.start, .waterfall-milestone.end { padding: 18px 16px; }
+  .incomes-list .income-row { padding: 20px 16px; flex-wrap: wrap; }
 }

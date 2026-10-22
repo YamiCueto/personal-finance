@@ -88,6 +88,42 @@ export class AppShellComponent implements OnInit {
   readonly upcomingDueDates = this.financialFacade.upcomingDueDates;
   readonly netWorth = this.financialFacade.netWorth;
 
+  readonly pageTitles = {
+    waterfall: 'Tu dinero, en perspectiva.',
+    obligations: 'Cada compromiso, en orden.',
+    credits: 'Un paso más cerca.',
+    cards: 'Tus tarjetas, bajo control.',
+    simulators: 'Explora tu próximo paso.',
+    incomes: 'Lo que suma a tus planes.',
+    accounts: 'Todo en su lugar.',
+  };
+  readonly pageDescriptions = {
+    waterfall: 'Una vista clara de lo que tienes y lo que viene.',
+    obligations: 'Organiza los pagos del mes y registra tu avance.',
+    credits: 'Consulta tus créditos y sigue la evolución de tu deuda.',
+    cards: 'Revisa tus cupos, saldos y compras en un solo espacio.',
+    simulators: 'Compara escenarios antes de tomar una decisión.',
+    incomes: 'Revisa tus ingresos y las cuentas donde los recibiste.',
+    accounts: 'Tus saldos disponibles, cuenta por cuenta.',
+  };
+  readonly paidPercentage = computed(() => {
+    const total = this.totalMonthlyObligations();
+    return total > 0 ? Math.min(100, Math.max(0, this.totalPaidObligations() / total * 100)) : 0;
+  });
+  readonly pendingPayments = computed(() => this.obligations()
+    .filter(o => o.status !== 'PAID' && o.status !== 'CANCELLED' && o.amountPending > 0)
+    .slice().sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999')).slice(0, 3));
+  readonly theme = signal<'light' | 'dark'>(
+    typeof document !== 'undefined' && document.documentElement.dataset['theme']
+      ? document.documentElement.dataset['theme'] as 'light' | 'dark'
+      : typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  );
+
+  toggleTheme(): void {
+    this.theme.update(value => value === 'light' ? 'dark' : 'light');
+    document.documentElement.dataset['theme'] = this.theme();
+  }
+
   readonly monthsList = [
     { value: 1, label: 'Enero' },
     { value: 2, label: 'Febrero' },

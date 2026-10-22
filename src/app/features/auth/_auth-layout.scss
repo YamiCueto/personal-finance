@@ -1,0 +1,41 @@
+:host { display: block; }
+.login-viewport, .signup-viewport, .auth-viewport {
+  min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4vw; padding: 24px; max-width: 1600px; margin: auto; align-items: center;
+}
+app-auth-story { align-self: stretch; }
+.login-card, .signup-card, .auth-card { width: 100%; max-width: 440px; padding: 40px 24px; margin: auto; }
+.login-header, .signup-header, .auth-header { margin-bottom: 32px; }
+.wordmark { font-size: 28px; font-weight: 700; letter-spacing: -1.4px; margin: 0 0 36px; }
+.wordmark em { font-style: normal; color: var(--accent); }
+.badge-vault { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--t2); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.vault-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+.vault-title { font-size: clamp(25px, 2.6vw, 36px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; margin: 0 0 14px; }
+.vault-description { font-size: 14px; color: var(--t2); line-height: 1.7; margin: 0; }
+.login-form, .signup-form, .auth-form { display: flex; flex-direction: column; gap: 20px; }
+.form-field { display: flex; flex-direction: column; gap: 8px; }
+.field-label { color: var(--t1); font-size: 12px; font-weight: 600; }
+.input-wrapper { position: relative; width: 100%; }
+.field-input { width: 100%; min-height: 52px; padding: 12px 16px; background: var(--s1); border: 1px solid var(--bd); border-radius: 10px; color: var(--t1); font: inherit; font-size: 14px; transition: border-color .18s, box-shadow .18s; }
+.input-wrapper:has(.btn-toggle-visibility) .field-input { padding-right: 76px; }
+.field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field-input::placeholder { color: var(--t3); }.field-input.input-invalid { border-color: var(--red); }
+.btn-toggle-visibility { position: absolute; top: 4px; right: 5px; min-height: 44px; min-width: 52px; border: 0; border-radius: 8px; background: transparent; color: var(--accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.field-error, .field-hint { font-size: 12px; margin: 0; line-height: 1.5; }.field-error { color: var(--red); }.field-hint { color: var(--t2); }
+.form-assist { text-align: right; margin-top: -6px; }
+a { color: var(--accent); text-underline-offset: 4px; font-weight: 600; font-size: 12px; }
+.link-assist, .link-action { text-decoration: none; }a:hover { text-decoration: underline; }
+.form-action { margin-top: 4px; }
+.btn-primary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 52px; padding: 12px 20px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .18s; text-decoration: none; }
+.btn-primary:hover:not(:disabled) { background: var(--amber-hover); }.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.login-footer, .signup-footer, .auth-footer { margin-top: 30px; border-top: 1px solid var(--bd); padding-top: 24px; }
+.footer-prompt { margin: 0; color: var(--t2); font-size: 12px; line-height: 1.8; }.link-action { margin-left: 4px; }
+.alert { display: flex; gap: 12px; padding: 16px; margin-bottom: 24px; border-radius: 10px; border: 1px solid var(--bd); font-size: 13px; }.alert-icon { width: 20px; height: 20px; flex-shrink: 0; }.alert-title { display: block; margin-bottom: 4px; }.alert-text { margin: 0; }
+.alert-error { color: var(--red); background: var(--red-bg); }.alert-success { color: var(--green); background: var(--green-bg); }
+.btn-spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }@keyframes spin { to { transform: rotate(360deg); } }
+.recovery-expired-actions { margin-top: 20px; }
+@media(max-width: 767px) {
+  .login-viewport, .signup-viewport, .auth-viewport { display: flex; padding: 24px 16px; background: var(--bg); }
+  .login-card, .signup-card, .auth-card { padding: 28px 8px; max-width: 420px; }
+  .wordmark { margin-bottom: 32px; }.vault-title { font-size: 30px; }
+}

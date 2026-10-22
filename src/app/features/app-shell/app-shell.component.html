@@ -1,9 +1,10 @@
-<div class="app-layout" role="application">
+<a class="skip-link" href="#main-content">Ir al contenido</a>
+<div class="app-layout">
   <!-- ── 1. SIDEBAR NAVIGATION (Desktop & Tablet) ────────────────────── -->
   <aside class="app-sidebar" [class.collapsed]="isSidebarCollapsed()" aria-label="Navegación Principal">
     <div class="sidebar-top">
       <div class="brand-container">
-        <span class="brand-wordmark">personal<em>.</em></span>
+        <span class="brand-wordmark"><span class="brand-symbol" aria-hidden="true">p</span>personal<em>.</em></span>
         <button
           type="button"
           class="sidebar-toggle-btn"
@@ -24,21 +25,26 @@
     </div>
 
     <!-- Navegación de Módulos (Sidebar) -->
+    <div class="sidebar-nav-label">TU ESPACIO</div>
     <nav class="sidebar-nav" aria-label="Módulos de la Bóveda">
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'waterfall'"
+        [attr.aria-current]="activeTab() === 'waterfall' ? 'page' : null"
+        data-testid="tab-waterfall"
         (click)="setActiveTab('waterfall')"
       >
-        <app-icon name="waterfall" [size]="20" />
-        <span class="nav-text">Cascada (Resto)</span>
+        <app-icon name="home" [size]="20" />
+        <span class="nav-text">Resumen</span>
       </button>
 
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'obligations'"
+        [attr.aria-current]="activeTab() === 'obligations' ? 'page' : null"
+        data-testid="tab-obligations"
         (click)="setActiveTab('obligations')"
       >
         <app-icon name="document-text" [size]="20" />
@@ -48,8 +54,10 @@
 
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'credits'"
+        [attr.aria-current]="activeTab() === 'credits' ? 'page' : null"
+        data-testid="tab-credits"
         (click)="setActiveTab('credits')"
       >
         <app-icon name="credit-card" [size]="20" />
@@ -59,8 +67,10 @@
 
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'cards'"
+        [attr.aria-current]="activeTab() === 'cards' ? 'page' : null"
+        data-testid="tab-cards"
         (click)="setActiveTab('cards')"
       >
         <app-icon name="credit-card" [size]="20" />
@@ -70,8 +80,10 @@
 
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'simulators'"
+        [attr.aria-current]="activeTab() === 'simulators' ? 'page' : null"
+        data-testid="tab-simulators"
         (click)="setActiveTab('simulators')"
       >
         <app-icon name="bolt" [size]="20" />
@@ -80,8 +92,10 @@
 
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'incomes'"
+        [attr.aria-current]="activeTab() === 'incomes' ? 'page' : null"
+        data-testid="tab-incomes"
         (click)="setActiveTab('incomes')"
       >
         <app-icon name="incomes" [size]="20" />
@@ -91,8 +105,10 @@
 
       <button
         type="button"
-        class="nav-link"
+        class="nav-link tab-btn"
         [class.active]="activeTab() === 'accounts'"
+        [attr.aria-current]="activeTab() === 'accounts' ? 'page' : null"
+        data-testid="tab-accounts"
         (click)="setActiveTab('accounts')"
       >
         <app-icon name="bank" [size]="20" />
@@ -101,6 +117,11 @@
       </button>
     </nav>
 
+    <div class="sidebar-note">
+      <app-icon name="shield-check" [size]="20" />
+      <strong>Un hábito que suma.</strong>
+      <p>Unos minutos para tus finanzas. Más claridad para tu día.</p>
+    </div>
     <!-- Sidebar Footer / Perfil -->
     <div class="sidebar-footer">
       <div class="user-profile-box">
@@ -153,9 +174,7 @@
     <header class="app-topbar" role="banner">
       <div class="topbar-brand-row">
         <span class="topbar-brand-title">personal<em>.</em></span>
-        @if (financialFacade.isDemoMode()) {
-          <span class="demo-badge-pill" data-testid="demo-badge">MODO DEMO LOCAL</span>
-        }
+        <span class="topbar-context">Mi espacio <span>/</span> Finanzas personales</span>
       </div>
 
       <!-- Acciones de Cabecera (Botones Rápidos) -->
@@ -174,6 +193,9 @@
         </button>
       </div>
 
+      <button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="theme() === 'light' ? 'Activar tema oscuro' : 'Activar tema claro'" [attr.aria-pressed]="theme() === 'dark'" title="Cambiar tema">
+        <span aria-hidden="true">◐</span>
+      </button>
       <!-- Botón de logout -->
       <button
         type="button"
@@ -187,8 +209,6 @@
       </button>
     </header>
 
-    <!-- Hidden compatibility text for base E2E verification -->
-    <h1 class="visually-hidden">Authenticated Session Verified</h1>
 
     <!-- Notificaciones / Banners de Alerta Accesibles -->
     @if (actionError()) {
@@ -206,14 +226,26 @@
       </div>
     }
 
+    <section class="page-intro" aria-labelledby="page-title">
+      <div>
+        <div class="intro-eyebrow"><p class="eyebrow">TU ESPACIO FINANCIERO</p>
+          @if (financialFacade.isDemoMode()) { <span class="demo-badge-pill" data-testid="demo-badge">DEMO · DATOS FICTICIOS</span> }
+        </div>
+        <h1 id="page-title">{{ pageTitles[activeTab()] }}</h1>
+        <p class="intro-description">{{ pageDescriptions[activeTab()] }}</p>
+      </div>
+      <div class="period-label"><app-icon name="document-text" [size]="16" /><span>{{ monthsList[selectedMonth() - 1].label }} {{ selectedYear() }}</span><span class="currency-label">COP</span></div>
+    </section>
+
     <!-- Selector de Período Mensual (Horizontal Carousel / Thumb-Zone) -->
-    <nav class="month-selector" [class.mobile-hidden]="activeTab() !== 'waterfall' && activeTab() !== 'obligations'" aria-label="Selector de Período Mensual">
+    <nav class="month-selector" aria-label="Selector de Período Mensual">
       <div class="month-carousel-track">
         @for (m of monthsList; track m.value) {
           <button
             type="button"
             class="month-pill"
             [class.active]="selectedMonth() === m.value"
+            [attr.aria-pressed]="selectedMonth() === m.value"
             (click)="selectMonth(m.value)"
           >
             {{ m.label }}
@@ -223,26 +255,30 @@
     </nav>
 
     <!-- ── 3. SECCIÓN DE MÉTRICAS / KPIS FINANCIEROS ─────────────────── -->
-    <section class="kpi-section" [class.mobile-hidden]="activeTab() !== 'waterfall'" aria-label="Métricas Principales">
+    @if (activeTab() === 'waterfall') {
+    <section class="kpi-section" aria-label="Métricas Principales">
       <div class="kpi-grid">
         <!-- Card 1: Saldo Real en Cuentas -->
         <div class="kpi-card real-balance">
-          <span class="kpi-label">Saldo Real en Bóveda</span>
+          <span class="kpi-icon"><app-icon name="bank" [size]="19" /></span>
+          <span class="kpi-label">Saldo disponible</span>
           <strong class="kpi-value tabular-nums">{{ totalLiquidBalance() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
           <span class="kpi-sub">Total líquido disponible en cuentas</span>
         </div>
 
         <!-- Card 2: Dinero Libre Proyectado (Libre) -->
         <div class="kpi-card free-capital">
-          <span class="kpi-label">Total Libre (Ingresos - Deducciones)</span>
+          <span class="kpi-icon"><app-icon name="waterfall" [size]="19" /></span>
+          <span class="kpi-label">Libre este mes</span>
           <strong class="kpi-value tabular-nums" [class.negative]="totalFreeProjected() < 0">
             {{ totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
           </strong>
-          <span class="kpi-sub">Fórmula Excel: Total Ingresos - Deducciones</span>
+          <span class="kpi-sub">Ingresos menos compromisos del mes</span>
         </div>
 
         <!-- Card 3: Liquidez Proyectada -->
         <div class="kpi-card projected-liquidity">
+          <span class="kpi-icon"><app-icon name="incomes" [size]="19" /></span>
           <span class="kpi-label">Liquidez Proyectada</span>
           <strong class="kpi-value tabular-nums" [class.negative]="projectedLiquidity() < 0">
             {{ projectedLiquidity() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
@@ -250,9 +286,10 @@
           <span class="kpi-sub">Saldo en cuentas - Obligaciones pendientes</span>
         </div>
 
-        <!-- Card 4: Deuda Total de Capital -->
+        <!-- Card 4: Deuda de capital -->
         <div class="kpi-card principal-debt">
-          <span class="kpi-label">Deuda Total de Capital</span>
+          <span class="kpi-icon"><app-icon name="credit-card" [size]="19" /></span>
+          <span class="kpi-label">Deuda de capital</span>
           <strong class="kpi-value tabular-nums text-amber" data-testid="dashboard-total-debt">
             {{ totalPrincipalDebt() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
           </strong>
@@ -293,92 +330,48 @@
       </div>
     </section>
 
-    <!-- Barra de pestañas secundarias horizontal para acceso rápido en móvil y desktop -->
-    <nav class="module-tabs" role="tablist" aria-label="Pestañas de Funcionalidad">
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'waterfall'"
-        (click)="setActiveTab('waterfall')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'waterfall'"
-      >
-        Cascada (Resto)
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'obligations'"
-        (click)="setActiveTab('obligations')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'obligations'"
-      >
-        Obligaciones ({{ obligations().length }})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'credits'"
-        (click)="setActiveTab('credits')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'credits'"
-        data-testid="tab-credits"
-      >
-        Créditos ({{ loans().length }})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'cards'"
-        (click)="setActiveTab('cards')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'cards'"
-        data-testid="tab-cards"
-      >
-        Tarjetas ({{ creditCards().length }})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'simulators'"
-        (click)="setActiveTab('simulators')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'simulators'"
-        data-testid="tab-simulators"
-      >
-        Simuladores
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'incomes'"
-        (click)="setActiveTab('incomes')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'incomes'"
-      >
-        Ingresos ({{ incomes().length }})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="activeTab() === 'accounts'"
-        (click)="setActiveTab('accounts')"
-        role="tab"
-        [attr.aria-selected]="activeTab() === 'accounts'"
-      >
-        Cuentas ({{ accounts().length }})
-      </button>
-    </nav>
+    }
+
+    @if (activeTab() === 'waterfall') {
+      <section class="overview-grid" aria-label="Plan de pagos del mes">
+        <article class="payment-progress">
+          <div class="overview-card-heading"><h2>Tu mes, en marcha</h2><span class="section-marker">01 / SEGUIMIENTO</span></div>
+          <div class="progress-content">
+            <div class="progress-ring" [style.--progress]="paidPercentage() + '%'" role="img" [attr.aria-label]="'Has pagado el ' + (paidPercentage() | number:'1.0-0') + '% de las obligaciones del mes'">
+              <div><strong>{{ paidPercentage() | number:'1.0-0' }}<small>%</small></strong><span>pagado</span></div>
+            </div>
+            <div class="progress-detail">
+              <p>{{ totalMonthlyObligations() > 0 ? 'Cada pago es un paso adelante.' : 'Tu mes empieza aquí.' }}</p>
+              <div class="legend-line"><span><i class="legend-dot paid"></i>Pagado</span><strong>{{ totalPaidObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong></div>
+              <div class="legend-line"><span><i class="legend-dot pending"></i>Pendiente</span><strong>{{ totalPendingObligations() | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong></div>
+              <button class="text-action" (click)="setActiveTab('obligations')">Ver mis obligaciones <app-icon name="arrow-right" [size]="16" /></button>
+            </div>
+          </div>
+        </article>
+        <article class="upcoming-panel">
+          <div class="overview-card-heading"><h2>Pagos por atender</h2><app-icon name="document-text" [size]="18" /></div>
+          @for (payment of pendingPayments(); track payment.id) {
+            <button type="button" class="upcoming-row" (click)="openPaymentModal(payment)">
+              <span class="due-date"><strong>{{ payment.dueDate ? (payment.dueDate | date:'dd':'UTC') : '—' }}</strong><small>{{ payment.dueDate ? (payment.dueDate | date:'MMM':'UTC':'es-CO') : 'sin fecha' }}</small></span>
+              <span class="due-info"><strong>{{ payment.name }}</strong><small>Registrar pago</small></span>
+              <span class="due-amount">{{ payment.amountPending | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}<app-icon name="chevron-right" [size]="14" /></span>
+            </button>
+          } @empty {
+            <div class="upcoming-empty"><app-icon name="check-circle" [size]="28" /><strong>No tienes pagos pendientes</strong><p>Los compromisos de este mes aparecerán aquí.</p></div>
+          }
+        </article>
+      </section>
+    }
 
     <!-- ── 4. PANELES DE CONTENIDO POR PESTAÑA ────────────────────────── -->
-    <main class="tab-panel-container" role="main">
+    <main id="main-content" tabindex="-1" class="tab-panel-container" role="main">
       <!-- Pestaña 1: Cascada de Capital (Motor Resto) -->
       @if (activeTab() === 'waterfall') {
         <section class="tab-panel" aria-label="Cascada de Capital">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">Cascada de Amortización Mensual</h2>
-              <p class="panel-desc">Visualización progresiva del dinero restante tras cada deducción planificada.</p>
+              <h2 class="panel-title">Así se distribuye tu dinero</h2>
+              <p class="panel-desc">De tus ingresos a tu saldo libre, compromiso a compromiso.</p>
             </div>
           </div>
 
@@ -394,7 +387,7 @@
             <div class="waterfall-list">
               <!-- Hito Inicial: Ingresos Base -->
               <div class="waterfall-milestone start">
-                <span class="milestone-label">Base de Ingresos Totales</span>
+                <span class="milestone-label">Punto de partida · Tus ingresos</span>
                 <span class="milestone-val tabular-nums">{{ totalIncome() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</span>
               </div>
 
@@ -425,7 +418,7 @@
 
               <!-- Hito Final: Saldo Libre -->
               <div class="waterfall-milestone end">
-                <span class="milestone-label">Saldo Libre Final (Fila 23)</span>
+                <span class="milestone-label">Tu saldo libre al final del mes</span>
                 <span class="milestone-val tabular-nums" [class.negative]="totalFreeProjected() < 0">
                   {{ totalFreeProjected() | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}
                 </span>
@@ -590,9 +583,10 @@
       <button
         type="button"
         class="bn-item"
+        [attr.aria-current]="activeTab() === 'waterfall' ? 'page' : null"
         [class.active]="activeTab() === 'waterfall'"
         (click)="setActiveTab('waterfall')"
-        aria-label="Ir a Cascada"
+        aria-label="Ir al resumen"
       >
         <app-icon name="home" [size]="20" />
         <span>Inicio</span>
@@ -601,6 +595,7 @@
       <button
         type="button"
         class="bn-item"
+        [attr.aria-current]="activeTab() === 'credits' ? 'page' : null"
         [class.active]="activeTab() === 'credits'"
         (click)="setActiveTab('credits')"
         aria-label="Ir a Créditos"
@@ -612,6 +607,7 @@
       <button
         type="button"
         class="bn-item"
+        [attr.aria-current]="activeTab() === 'cards' ? 'page' : null"
         [class.active]="activeTab() === 'cards'"
         (click)="setActiveTab('cards')"
         aria-label="Ir a Tarjetas"
@@ -623,6 +619,7 @@
       <button
         type="button"
         class="bn-item"
+        [attr.aria-current]="activeTab() === 'simulators' ? 'page' : null"
         [class.active]="activeTab() === 'simulators'"
         (click)="setActiveTab('simulators')"
         aria-label="Ir a Simuladores"
@@ -634,7 +631,8 @@
       <button
         type="button"
         class="bn-item"
-        [class.active]="showMobileMoreMenu()"
+        [class.active]="showMobileMoreMenu() || activeTab() === 'obligations' || activeTab() === 'incomes' || activeTab() === 'accounts'"
+        [attr.aria-expanded]="showMobileMoreMenu()"
         (click)="toggleMobileMore()"
         aria-label="Más opciones de navegación"
         aria-haspopup="dialog"

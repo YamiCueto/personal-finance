@@ -10,7 +10,7 @@
     .title {
       font-family: var(--font-display);
       font-size: 1.35rem;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--t1);
       margin: 0 0 0.25rem 0;
       letter-spacing: -0.015em;
@@ -55,7 +55,7 @@
     &.active {
       background-color: var(--s1);
       color: var(--amber);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 2px 4px rgba(24, 47, 34, 0.08);
     }
   }
 }
@@ -105,12 +105,12 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 15px -3px rgba(24, 47, 34, 0.08);
 
   .card-title {
     font-family: var(--font-display);
     font-size: 1.15rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--t1);
     margin: 0;
     border-bottom: 1px solid var(--bd2);
@@ -172,7 +172,7 @@
 .form-error-banner {
   background-color: var(--red-bg);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  color: var(--red);
   padding: 0.65rem 0.85rem;
   border-radius: 6px;
   font-size: 0.825rem;
@@ -252,12 +252,12 @@
   justify-content: center;
   padding: 0.75rem 1.25rem;
   background-color: var(--amber);
-  color: #0C1018;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--rsm);
   font-family: var(--font-display);
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease, opacity 0.15s ease;
 
@@ -293,7 +293,7 @@
   .savings-value {
     font-family: var(--font-mono);
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
@@ -327,7 +327,7 @@
 
     .comp-header {
       font-size: 0.85rem;
-      font-weight: 700;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       margin: 0 0 0.25rem 0;
@@ -385,4 +385,19 @@
     max-width: 300px;
     margin: 0;
   }
+}
+
+// Shared rhythm for the financial workspaces.
+.section-header .header-titles .title { font-size: 22px; font-weight: 550; letter-spacing: -.035em; }
+.credit-card, .credit-card-panel, .simulator-card { box-shadow: var(--shadow); }
+.credit-card-metrics .metric-item.highlight { background: var(--accent-soft); border-color: transparent; padding: 20px; }
+.credit-card-metrics .metric-item.highlight .metric-val { font-family: var(--font-body); font-size: 30px; font-weight: 500; letter-spacing: -.04em; }
+.form-input, .form-select { min-height: 48px; background: var(--s1); }
+.modal-card { box-shadow: 0 24px 80px -20px #11241c4d; }
+.modal-header .modal-close { min-width: 44px; min-height: 44px; }
+.alert-close { min-width: 40px; min-height: 40px; }
+@media(max-width: 767px) {
+  .credit-card, .credit-card-panel, .simulator-card { padding: 18px; }
+  .section-header .header-titles .title { font-size: 20px; }
+  .credit-card-metrics { gap: 16px; }
 }

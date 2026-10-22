@@ -1,3 +1,4 @@
+import { AuthStoryComponent } from '../auth-story.component';
 import { Component, inject, signal } from '@angular/core';
 import {
   AbstractControl,
@@ -44,7 +45,7 @@ export function passwordMatchValidator(control: AbstractControl): ValidationErro
 
 @Component({
   selector: 'app-signup',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [AuthStoryComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss',
 })

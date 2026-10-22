@@ -1,3 +1,4 @@
+import { openModule } from './helpers/navigation';
 import { test, expect } from '@playwright/test';
 import {
   MOCK_USER_A,
@@ -147,7 +148,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     await expect(page).toHaveURL(/\/app/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Authenticated Session Verified');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tu dinero, en perspectiva.');
     await expect(page.locator('[data-testid="user-email"]')).toContainText(MOCK_USER_A.email);
     await expect(page.locator('[data-testid="user-id"]')).toContainText(MOCK_USER_A.id);
   });
@@ -249,7 +250,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.getByRole('button', { name: /ingresar a la bóveda|sign in to vault/i }).click();
 
     await expect(page).toHaveURL('/app?view=portfolio-allocations');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Authenticated Session Verified');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tu dinero, en perspectiva.');
   });
 
   test('network failure during login displays connection error message gracefully', async ({ page }) => {
@@ -404,7 +405,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(page.locator('.kpi-card.real-balance .kpi-value')).toBeVisible();
 
     // 2. Registrar Ingreso
-    await page.getByRole('tab', { name: /ingresos/i }).click();
+    await openModule(page, 'incomes');
     await page.getByRole('button', { name: /\+ ingreso/i }).click();
     await expect(page.locator('.modal-card')).toBeVisible();
 
@@ -414,7 +415,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(page.locator('.alert-banner.success')).toBeVisible();
 
     // 3. Crear Obligación
-    await page.getByRole('tab', { name: /obligaciones/i }).click();
+    await openModule(page, 'obligations');
     await page.getByRole('button', { name: /\+ obligación/i }).click();
     await expect(page.locator('.modal-card')).toBeVisible();
 
@@ -434,7 +435,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(obligationCard.locator('.paid-check')).toBeVisible();
 
     // 5. Verificar Cascada
-    await page.getByRole('tab', { name: /cascada/i }).click();
+    await openModule(page, 'waterfall');
     await expect(page.locator('.waterfall-milestone.start')).toBeVisible();
     await expect(page.locator('.waterfall-milestone.end')).toBeVisible();
   });
@@ -444,7 +445,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.goto('/app');
 
     // 1. Navegar a Créditos
-    await page.getByRole('tab', { name: /créditos/i }).click();
+    await openModule(page, 'credits');
     await expect(page.locator('[data-testid="credits-manager"]')).toBeVisible();
 
     // 2. Verificar Crédito A y B preconfigurados
@@ -484,7 +485,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(page.locator('[data-testid="credit-action-alert"]')).toContainText('ya fue generada previamente');
 
     // Verificar en pestaña de Obligaciones
-    await page.getByRole('tab', { name: /obligaciones/i }).click();
+    await openModule(page, 'obligations');
     await expect(page.locator('.obligation-card', { hasText: 'Crédito Educativo' })).toBeVisible();
   });
 
@@ -493,7 +494,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.goto('/app');
 
     // 1. Navegar a Tarjetas
-    await page.getByRole('tab', { name: /tarjetas/i }).click();
+    await openModule(page, 'cards');
     await expect(page.locator('[data-testid="credit-cards-manager"]')).toBeVisible();
 
     // 2. Verificar Tarjeta A y B
@@ -542,7 +543,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await page.goto('/app');
 
     // 1. Navegar a Simuladores
-    await page.getByRole('tab', { name: /simuladores/i }).click();
+    await openModule(page, 'simulators');
     await expect(page.locator('[data-testid="financial-simulators"]')).toBeVisible();
     await expect(page.locator('.disclaimer-banner')).toBeVisible();
 
@@ -571,7 +572,7 @@ test.describe('Authentication Foundation & Route Protection (Deterministic Mocks
     await expect(page.locator('[data-testid="redeferred-cost-diff"]')).toBeVisible();
 
     // 5. Validar que los saldos reales no sufrieron modificaciones
-    await page.getByRole('tab', { name: /créditos/i }).click();
+    await openModule(page, 'credits');
     const creditCardA = page.locator('.credit-card', { hasText: 'Crédito Vehículo Occidente' });
     await expect(creditCardA.locator('[data-testid="credit-principal-balance"]')).toContainText('32.000.000,00');
   });

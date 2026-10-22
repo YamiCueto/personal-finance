@@ -75,6 +75,8 @@ import { CommonModule } from '@angular/common';
   styles: [
     `
       .credit-card-visual {
+        --t1: #f5f4e9; --t2: #d4e0cc; --t3: #c4d4bb; --amber: #e0e8ba;
+        --amber-bg: #a2c49b33;
         background: linear-gradient(135deg, #172030 0%, #1e293d 50%, #172030 100%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 18px;
@@ -82,7 +84,7 @@ import { CommonModule } from '@angular/common';
         position: relative;
         overflow: hidden;
         color: var(--t1);
-        box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        box-shadow: 0 12px 30px -10px rgba(22, 48, 36, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -93,12 +95,12 @@ import { CommonModule } from '@angular/common';
         margin: 0 auto;
 
         &.mastercard {
-          background: linear-gradient(135deg, #1A1D24 0%, #252834 50%, #191B24 100%);
+          background: linear-gradient(125deg, #35463b, #52654e);
           border-color: rgba(212, 160, 23, 0.25);
         }
 
         &.visa {
-          background: linear-gradient(135deg, #131E30 0%, #1B2C47 50%, #10192A 100%);
+          background: linear-gradient(125deg, #173e35, #356551);
           border-color: rgba(6, 182, 212, 0.25);
         }
       }
@@ -111,7 +113,7 @@ import { CommonModule } from '@angular/common';
         height: 140px;
         border-radius: 50%;
         background: var(--amber-bg);
-        filter: blur(20px);
+        border: 1px solid #adc49b44; transform: scale(2); background: transparent;
         pointer-events: none;
       }
 
@@ -161,11 +163,11 @@ import { CommonModule } from '@angular/common';
 
       .card-number {
         font-family: var(--font-mono);
-        font-size: 16px;
-        letter-spacing: 0.18em;
+        font-size: clamp(12px, 3.5vw, 16px);
+        letter-spacing: 0.1em;
         color: var(--t1);
         display: flex;
-        gap: 12px;
+        gap: 8px;
         z-index: 1;
         margin: 8px 0;
 
