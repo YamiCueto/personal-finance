@@ -1,3 +1,4 @@
+import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
 import { AuthStoryComponent } from '../auth-story.component';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import {
@@ -39,7 +40,7 @@ export function passwordMatchValidator(control: AbstractControl): ValidationErro
 
 @Component({
   selector: 'app-reset-password',
-  imports: [AuthStoryComponent, ReactiveFormsModule, RouterLink],
+  imports: [BrandLogoComponent, AuthStoryComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './reset-password.component.html',
   styleUrl: './reset-password.component.scss',
 })

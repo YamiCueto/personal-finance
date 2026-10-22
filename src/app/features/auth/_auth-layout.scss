@@ -6,8 +6,7 @@
 app-auth-story { align-self: stretch; }
 .login-card, .signup-card, .auth-card { width: 100%; max-width: 440px; padding: 40px 24px; margin: auto; }
 .login-header, .signup-header, .auth-header { margin-bottom: 32px; }
-.wordmark { font-size: 28px; font-weight: 700; letter-spacing: -1.4px; margin: 0 0 36px; }
-.wordmark em { font-style: normal; color: var(--accent); }
+.wordmark { width: 170px; margin: 0 0 30px; }
 .badge-vault { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--t2); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .vault-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
 .vault-title { font-size: clamp(25px, 2.6vw, 36px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; margin: 0 0 14px; }

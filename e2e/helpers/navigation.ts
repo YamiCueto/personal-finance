@@ -1,7 +1,7 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
-/** Exercise the same navigation controls users see at each viewport. */
 export async function openModule(page: Page, module: 'waterfall' | 'obligations' | 'credits' | 'cards' | 'simulators' | 'incomes' | 'accounts') {
+  await expect(page.locator('.app-layout')).toBeVisible();
   const desktopButton = page.getByTestId(`tab-${module}`);
   if (await desktopButton.isVisible()) {
     await desktopButton.click();

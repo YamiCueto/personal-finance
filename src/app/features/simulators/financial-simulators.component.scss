@@ -89,15 +89,16 @@
 
 .simulator-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
 
   @media (min-width: 900px) {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .simulator-card {
+  min-width: 0;
   background-color: var(--s1);
   border: 1px solid var(--bd);
   border-radius: var(--r);
@@ -125,10 +126,13 @@
 }
 
 .form-group {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
+
+.form-input, .form-select { width: 100%; min-width: 0; max-width: 100%; }
 
 .form-row {
   display: grid;
@@ -387,7 +391,6 @@
   }
 }
 
-// Shared rhythm for the financial workspaces.
 .section-header .header-titles .title { font-size: 22px; font-weight: 550; letter-spacing: -.035em; }
 .credit-card, .credit-card-panel, .simulator-card { box-shadow: var(--shadow); }
 .credit-card-metrics .metric-item.highlight { background: var(--accent-soft); border-color: transparent; padding: 20px; }

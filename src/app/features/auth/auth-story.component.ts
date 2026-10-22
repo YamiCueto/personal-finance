@@ -1,10 +1,12 @@
+import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
 import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-auth-story',
+  imports: [BrandLogoComponent],
   template: `
     <aside class="story" aria-label="Tu espacio financiero">
-      <div class="story-brand"><span class="brand-symbol" aria-hidden="true">p</span> personal<span>.</span></div>
+      <app-brand-logo class="story-brand" />
       <div class="story-copy">
         <p class="eyebrow">MENOS RUIDO. MÁS CLARIDAD.</p>
         <h2>Haz espacio<br>para lo que<br><em>sí importa.</em></h2>
@@ -15,15 +17,13 @@ import { Component } from '@angular/core';
         <div class="art-note"><span class="note-dot"></span> Un paso a la vez.</div>
         <div class="art-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       </div>
-      <div class="story-footer"><span>FINANZAS CON PERSPECTIVA</span><span>01 — PERSONAL</span></div>
+      <div class="story-footer"><span>FINANZAS CON PERSPECTIVA</span><span>01 — BRAVISO</span></div>
     </aside>
   `,
   styles: `
     :host { display: block; height: 100%; }
     .story { min-height: 760px; height: 100%; padding: 48px; background: #173e35; color: #f5f3e9; border-radius: 24px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
-    .story-brand { font-size: 26px; letter-spacing: -1.3px; font-weight: 650; display: flex; align-items: center; gap: 10px; }
-    .story-brand > span:last-child { color: #dce7b1; margin-left: -10px; }
-    .brand-symbol { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #8aa799; border-radius: 10px; font-family: Georgia, serif; font-style: italic; }
+    .story-brand { width: 185px; color: #dce7b1; }
     .story-copy { z-index: 1; margin-top: 78px; }
     .eyebrow { font-size: 10px; letter-spacing: .19em; font-weight: 600; color: #c4d3c4; }
     h2 { font-family: var(--font-editorial); font-weight: 400; font-size: clamp(48px, 4.6vw, 72px); line-height: 1.04; letter-spacing: -.04em; color: inherit; margin: 24px 0; }

@@ -13,6 +13,7 @@ const MIME: Record<string, string> = {
   '.json': 'application/json',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml',
   '.webmanifest': 'application/manifest+json',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
@@ -147,5 +148,29 @@ test.describe('GitHub Pages — Enrutamiento SPA con 404.html fallback', () => {
     const response = await page.goto(`${SIM_ORIGIN}${BASE_PATH}/`, { waitUntil: 'domcontentloaded' });
     expect(response?.status()).toBe(200);
     await expect(page.locator('app-root')).toBeAttached({ timeout: 10000 });
+  });
+
+  test('BRAVISO conserva base href, rutas de instalación e iconos bajo el subdirectorio', async ({ page }) => {
+    await page.goto(`${SIM_ORIGIN}${BASE_PATH}/auth/login`, { waitUntil: 'networkidle' });
+    await expect(page).toHaveTitle('BRAVISO — Tu dinero, en perspectiva.');
+    await expect(page.locator('base')).toHaveAttribute('href', '/personal-finance/');
+    const resources = await page.evaluate(async () => {
+      const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')!;
+      const manifestResponse = await fetch(manifestLink.href);
+      const manifest = await manifestResponse.json();
+      const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!;
+      const faviconResponse = await fetch(favicon.href);
+      const icons = await Promise.all(manifest.icons.map(async (icon: { src: string }) => {
+        const response = await fetch(new URL(icon.src, manifestLink.href));
+        return response.status;
+      }));
+      return { name: manifest.short_name, scope: manifest.scope, start: manifest.start_url, favicon: favicon.href, faviconStatus: faviconResponse.status, icons };
+    });
+    expect(resources.name).toBe('BRAVISO');
+    expect(resources.scope).toBe('/personal-finance/');
+    expect(resources.start).toBe('/personal-finance/app');
+    expect(resources.favicon).toBe(`${SIM_ORIGIN}${BASE_PATH}/favicon.svg`);
+    expect(resources.faviconStatus).toBe(200);
+    expect(resources.icons).toEqual([200, 200, 200, 200]);
   });
 });

@@ -1,4 +1,4 @@
-# Personal Finance Management System
+# BRAVISO — Tu dinero, en perspectiva.
 
 A personal financial management web application designed to replace spreadsheet-based financial tracking with a reactive, secure system.
 

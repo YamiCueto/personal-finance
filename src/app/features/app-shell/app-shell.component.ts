@@ -1,3 +1,4 @@
+import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -21,6 +22,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
   selector: 'app-app-shell',
   standalone: true,
   imports: [
+    BrandLogoComponent,
     CommonModule,
     ReactiveFormsModule,
     CreditsManagerComponent,
@@ -122,6 +124,9 @@ export class AppShellComponent implements OnInit {
   toggleTheme(): void {
     this.theme.update(value => value === 'light' ? 'dark' : 'light');
     document.documentElement.dataset['theme'] = this.theme();
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta =>
+      meta.setAttribute('content', this.theme() === 'light' ? '#f5f5ef' : '#14251f'),
+    );
   }
 
   readonly monthsList = [

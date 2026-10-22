@@ -1,3 +1,4 @@
+import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component';
 import { AuthStoryComponent } from '../auth-story.component';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -6,7 +7,7 @@ import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
-  imports: [AuthStoryComponent, ReactiveFormsModule, RouterLink],
+  imports: [BrandLogoComponent, AuthStoryComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './forgot-password.component.html',
   styleUrl: './forgot-password.component.scss',
 })

@@ -1,5 +1,4 @@
 @use './app/features/app-shell/overview';
-/* Personal — calm surfaces, forest accents, editorial hierarchy. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Mono:wght@400;500&display=swap');
 @include overview.styles;
 
@@ -673,7 +672,6 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Shared controls and financial surfaces */
 button, input, select, textarea { font-family: inherit; }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button { touch-action: manipulation; }
@@ -710,3 +708,6 @@ button:not(:disabled), a, input, select, textarea { transition: background-color
   .waterfall-milestone { flex-wrap: wrap; }.waterfall-milestone.start, .waterfall-milestone.end { padding: 18px 16px; }
   .incomes-list .income-row { padding: 20px 16px; flex-wrap: wrap; }
 }
+
+.skip-link { position: fixed; top: -80px; left: 20px; z-index: 2000; padding: 12px 20px; background: var(--accent); color: var(--on-accent); border-radius: 8px; }
+.skip-link:focus { top: 12px; }
