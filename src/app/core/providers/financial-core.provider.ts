@@ -13,6 +13,12 @@ import {
 } from '../repositories/financial-repositories.contract';
 import { LocalFinancialAdapter } from '../repositories/local-financial.adapter';
 import { SupabaseFinancialAdapter } from '../repositories/supabase-financial.adapter';
+import { FinancialAccountsService } from '../services/financial-accounts.service';
+import { CreditProductsService } from '../services/credit-products.service';
+import { PeriodObligationsService } from '../services/period-obligations.service';
+import { IncomesService } from '../services/incomes.service';
+import { FinancialOperationsService } from '../services/financial-operations.service';
+import { FinancialFacade } from '../state/financial.facade';
 
 /**
  * Proveedor de integración de la infraestructura financiera.
@@ -52,5 +58,11 @@ export function provideFinancialCore(config: Partial<FinancialConfig> = {}): Env
       provide: TRANSACTIONAL_OPERATION_REPOSITORY,
       useExisting: useLocal ? LocalFinancialAdapter : SupabaseFinancialAdapter,
     },
+    FinancialAccountsService,
+    CreditProductsService,
+    PeriodObligationsService,
+    IncomesService,
+    FinancialOperationsService,
+    FinancialFacade,
   ]);
 }

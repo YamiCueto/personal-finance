@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { ExistingDebtInput, ReconcileDebtInput } from '../models/debt-tracking.model';
 import {
   CREDIT_PRODUCT_REPOSITORY,
   CreateCreditProductDTO,
@@ -27,6 +28,10 @@ export class CreditProductsService {
   async getCreditProducts(): Promise<CreditProduct[]> {
     return this.repo.getCreditProducts(await this.resolveUserId());
   }
+
+  async registerExistingDebt(dto: ExistingDebtInput) { return this.repo.registerExistingDebt(await this.resolveUserId(), dto); }
+  async getDebtHistory(creditId: string) { return this.repo.getDebtHistory(await this.resolveUserId(), creditId); }
+  async reconcileDebt(dto: ReconcileDebtInput) { return this.repo.reconcileDebt(await this.resolveUserId(), dto); }
 
   async getCreditProductById(creditId: string): Promise<CreditProduct | null> {
     return this.repo.getCreditProductById(await this.resolveUserId(), creditId);

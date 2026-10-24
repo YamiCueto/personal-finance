@@ -3,7 +3,14 @@ import {
   FINANCIAL_ACCOUNT_REPOSITORY,
   CreateAccountDTO,
 } from '../repositories/financial-repositories.contract';
-import { FinancialAccount, FinancialInstitution } from '../models/financial-v2.model';
+import {
+  AccountHistorySummary,
+  DeleteAccountOptions,
+  FinancialAccount,
+  FinancialAccountDeletionAudit,
+  FinancialAuditLogEntry,
+  FinancialInstitution,
+} from '../models/financial-v2.model';
 import { AuthService } from './auth.service';
 import { FINANCIAL_CONFIG } from '../config/financial.config';
 import { resolveUserId } from '../utils/resolve-user-id';
@@ -49,7 +56,27 @@ export class FinancialAccountsService {
     return this.repo.createAccount(await this.resolveUserId(), dto);
   }
 
-  async archiveAccount(accountId: string): Promise<void> {
-    return this.repo.archiveAccount(await this.resolveUserId(), accountId);
+  async archiveAccount(accountId: string, idempotencyKey?: string): Promise<void> {
+    return this.repo.archiveAccount(await this.resolveUserId(), accountId, idempotencyKey);
+  }
+
+  async restoreAccount(accountId: string, idempotencyKey?: string): Promise<void> {
+    return this.repo.restoreAccount(await this.resolveUserId(), accountId, idempotencyKey);
+  }
+
+  async deleteAccount(accountId: string, options?: DeleteAccountOptions): Promise<void> {
+    return this.repo.deleteAccount(await this.resolveUserId(), accountId, options);
+  }
+
+  async getAccountHistory(accountId: string): Promise<AccountHistorySummary> {
+    return this.repo.getAccountHistory(await this.resolveUserId(), accountId);
+  }
+
+  async getAccountDeletionAudit(): Promise<FinancialAccountDeletionAudit[]> {
+    return this.repo.getAccountDeletionAudit(await this.resolveUserId());
+  }
+
+  async getAccountAuditTrail(accountId?: string): Promise<FinancialAuditLogEntry[]> {
+    return this.repo.getAccountAuditTrail(await this.resolveUserId(), accountId);
   }
 }

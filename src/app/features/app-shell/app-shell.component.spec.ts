@@ -53,6 +53,70 @@ describe('AppShellComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('prevents simultaneous deletion and keeps the dialog open until completion', async () => {
+    const account = await component.financialFacade.createAccount({name:'Cuenta de prueba',type:'CASH',initialBalance:0});
+    let finish!: () => void;
+    const request = vi.spyOn(component.financialFacade,'deleteAccount').mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+    component.requestAccountDeletion(account);
+    const first = component.confirmAccountDeletion();
+    await component.confirmAccountDeletion();
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(component.deleteBusy()).toBe(true);
+    expect(component.accountToDelete()?.id).toBe(account.id);
+    finish();
+    await first;
+    expect(component.accountToDelete()).toBeNull();
+    expect(component.deleteBusy()).toBe(false);
+  });
+
+  it('rejects deletion of an account with history, offers archiving after rejection, and supports independent archive and restore', async () => {
+    const account = component.accounts()[0];
+    component.requestAccountDeletion(account);
+    await component.confirmAccountDeletion();
+    expect(component.deleteHasHistory()).toBe(true);
+    expect(component.accountToDelete()?.id).toBe(account.id);
+    expect(component.accounts().find(a => a.id === account.id)?.isArchived).toBe(false);
+
+    await component.confirmAccountDeletion(true);
+    expect(component.accountToDelete()).toBeNull();
+    expect(component.accounts().find(a => a.id === account.id)?.isArchived).toBe(true);
+    expect(component.activeAccounts().some(a => a.id === account.id)).toBe(false);
+
+    await component.restoreArchivedAccount(component.accounts().find(a => a.id === account.id)!);
+    expect(component.accounts().find(a => a.id === account.id)?.isArchived).toBe(false);
+    expect(component.activeAccounts().some(a => a.id === account.id)).toBe(true);
+
+    component.requestAccountArchive(account);
+    expect(component.accountToArchive()?.id).toBe(account.id);
+    await component.confirmAccountArchive();
+    expect(component.accounts().find(a => a.id === account.id)?.isArchived).toBe(true);
+    await component.restoreArchivedAccount(component.accounts().find(a => a.id === account.id)!);
+    expect(component.accounts().find(a => a.id === account.id)?.isArchived).toBe(false);
+  });
+
+  it('renders independent archive and trash delete buttons in the top-right header only for active accounts', async () => {
+    component.setActiveTab('accounts');
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const activeCards = compiled.querySelectorAll('.account-card:not(.archived)');
+    expect(activeCards.length).toBeGreaterThan(0);
+    const firstTopDeleteBtn = activeCards[0].querySelector('.acc-top .acc-delete-btn');
+    const firstTopArchiveBtn = activeCards[0].querySelector('.acc-top .acc-archive-btn');
+    expect(firstTopDeleteBtn).not.toBeNull();
+    expect(firstTopArchiveBtn).not.toBeNull();
+    expect(firstTopDeleteBtn?.querySelector('svg')).not.toBeNull();
+    expect(firstTopArchiveBtn?.querySelector('svg')).not.toBeNull();
+    const account = component.accounts()[0];
+    component.requestAccountArchive(account);
+    await component.confirmAccountArchive();
+    fixture.detectChanges();
+    const archivedCard = compiled.querySelector('.account-card.archived');
+    expect(archivedCard).not.toBeNull();
+    expect(archivedCard?.querySelector('.acc-delete-btn')).toBeNull();
+    expect(archivedCard?.querySelector('.acc-archive-btn')).toBeNull();
+    expect(archivedCard?.querySelector('.acc-restore-btn')).not.toBeNull();
+  });
+
   it('should display the authenticated user email', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const emailEl = compiled.querySelector('[data-testid="user-email"]');

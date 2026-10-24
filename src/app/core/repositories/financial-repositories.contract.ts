@@ -1,4 +1,5 @@
 import { InjectionToken } from '@angular/core';
+import { DebtHistory, DebtReconciliation, ExistingDebtInput, ReconcileDebtInput } from '../models/debt-tracking.model';
 import {
   FinancialAccount,
   FinancialInstitution,
@@ -10,6 +11,10 @@ import {
   InternalAccountTransfer,
   PaymentBreakdownInput,
   CreditCardPurchase,
+  FinancialAuditLogEntry,
+  FinancialAccountDeletionAudit,
+  DeleteAccountOptions,
+  AccountHistorySummary,
 } from '../models/financial-v2.model';
 
 export interface CreateAccountDTO {
@@ -81,6 +86,7 @@ export interface CreateObligationDTO {
 }
 
 export interface RecordPaymentDTO {
+  paymentDate?: string;
   obligationId: string;
   accountId: string;
   amount: number;
@@ -134,13 +140,21 @@ export interface IFinancialAccountRepository {
   getAccounts(userId: string): Promise<FinancialAccount[]>;
   getAccountById(userId: string, accountId: string): Promise<FinancialAccount | null>;
   createAccount(userId: string, dto: CreateAccountDTO): Promise<FinancialAccount>;
-  archiveAccount(userId: string, accountId: string): Promise<void>;
+  archiveAccount(userId: string, accountId: string, idempotencyKey?: string): Promise<void>;
+  restoreAccount(userId: string, accountId: string, idempotencyKey?: string): Promise<void>;
+  deleteAccount(userId: string, accountId: string, options?: DeleteAccountOptions): Promise<void>;
+  getAccountHistory(userId: string, accountId: string): Promise<AccountHistorySummary>;
+  getAccountDeletionAudit(userId: string): Promise<FinancialAccountDeletionAudit[]>;
+  getAccountAuditTrail(userId: string, accountId?: string): Promise<FinancialAuditLogEntry[]>;
 }
 
 /**
  * Contrato del Repositorio de Productos Crediticios
  */
 export interface ICreditProductRepository {
+  registerExistingDebt(userId: string, dto: ExistingDebtInput): Promise<CreditProduct>;
+  getDebtHistory(userId: string, creditId: string): Promise<DebtHistory>;
+  reconcileDebt(userId: string, dto: ReconcileDebtInput): Promise<DebtReconciliation>;
   getCreditProducts(userId: string): Promise<CreditProduct[]>;
   getCreditProductById(userId: string, creditId: string): Promise<CreditProduct | null>;
   createCreditProduct(userId: string, dto: CreateCreditProductDTO): Promise<CreditProduct>;

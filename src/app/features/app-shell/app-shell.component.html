@@ -553,41 +553,208 @@
             </button>
           </div>
 
-          <div class="accounts-grid">
-            @for (acc of accounts(); track acc.id) {
-              <div class="account-card" [class.archived]="acc.isArchived">
-                <div class="acc-top">
-                  <span class="acc-badge">{{ acc.type }}</span>
-                  <h3 class="acc-name">{{ acc.name }}</h3>
-                </div>
-                <div class="acc-balance">
-                  <span class="small-label">Saldo Actual</span>
-                  <strong class="acc-val tabular-nums">{{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
-                </div>
-              </div>
-            }
+          <div class="accounts-filter-bar" role="group" aria-label="Filtro de cuentas">
+            <button
+              type="button"
+              class="acc-filter-btn"
+              [class.active]="accountViewFilter() === 'all'"
+              [attr.aria-pressed]="accountViewFilter() === 'all'"
+              (click)="accountViewFilter.set('all')"
+            >
+              Todas ({{ accounts().length }})
+            </button>
+            <button
+              type="button"
+              class="acc-filter-btn"
+              [class.active]="accountViewFilter() === 'active'"
+              [attr.aria-pressed]="accountViewFilter() === 'active'"
+              (click)="accountViewFilter.set('active')"
+            >
+              Cuentas activas ({{ activeAccounts().length }})
+            </button>
+            <button
+              type="button"
+              class="acc-filter-btn"
+              [class.active]="accountViewFilter() === 'archived'"
+              [attr.aria-pressed]="accountViewFilter() === 'archived'"
+              (click)="accountViewFilter.set('archived')"
+            >
+              Cuentas archivadas ({{ archivedAccounts().length }})
+            </button>
           </div>
+
+          @if (accountViewFilter() !== 'archived') {
+            <div class="accounts-grid" aria-label="Cuentas activas">
+              @for (acc of activeAccounts(); track acc.id) {
+                <div class="account-card">
+                  <div class="acc-top">
+                    <span class="acc-badge">{{ acc.type }}</span>
+                    <div class="acc-card-actions">
+                      <button
+                        type="button"
+                        class="acc-icon-btn acc-archive-btn"
+                        (click)="requestAccountArchive(acc)"
+                        [attr.aria-label]="'Archivar cuenta ' + acc.name"
+                        title="Archivar cuenta"
+                      >
+                        <app-icon name="archive" [size]="18" />
+                      </button>
+                      <button
+                        type="button"
+                        class="acc-icon-btn acc-delete-btn"
+                        (click)="requestAccountDeletion(acc)"
+                        [attr.aria-label]="'Eliminar cuenta ' + acc.name"
+                        title="Eliminar cuenta"
+                      >
+                        <app-icon name="trash" [size]="18" />
+                      </button>
+                    </div>
+                  </div>
+                  <h3 class="acc-name">{{ acc.name }}</h3>
+                  <div class="acc-balance">
+                    <span class="small-label">Saldo Actual</span>
+                    <strong class="acc-val tabular-nums">{{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+                  </div>
+                  <div class="acc-footer-actions">
+                    <button
+                      type="button"
+                      class="acc-secondary-btn"
+                      (click)="openAccountHistory(acc)"
+                      [attr.aria-label]="'Ver historial de ' + acc.name"
+                    >
+                      Ver historial
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          @if (accountViewFilter() === 'archived' || (accountViewFilter() === 'all' && archivedAccounts().length > 0)) {
+            <section class="archived-accounts-section" aria-label="Cuentas archivadas">
+              <div class="archived-section-header">
+                <h3 class="archived-section-title">Cuentas archivadas</h3>
+                <p class="archived-section-desc">Cuentas retiradas de los selectores operativos con datos e historial íntegros</p>
+              </div>
+              @if (archivedAccounts().length === 0) {
+                <p class="empty-archived-msg">No hay cuentas archivadas en este momento.</p>
+              } @else {
+                <div class="accounts-grid">
+                  @for (acc of archivedAccounts(); track acc.id) {
+                    <div class="account-card archived">
+                      <div class="acc-top">
+                        <span class="acc-badge">{{ acc.type }}</span>
+                        <span class="archived-pill">Archivada · historial conservado</span>
+                      </div>
+                      <h3 class="acc-name">{{ acc.name }}</h3>
+                      <div class="acc-balance">
+                        <span class="small-label">Saldo Actual</span>
+                        <strong class="acc-val tabular-nums">{{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</strong>
+                      </div>
+                      <div class="acc-footer-actions">
+                        <button
+                          type="button"
+                          class="acc-secondary-btn"
+                          (click)="openAccountHistory(acc)"
+                          [attr.aria-label]="'Ver historial de ' + acc.name"
+                        >
+                          Ver historial
+                        </button>
+                        <button
+                          type="button"
+                          class="acc-restore-btn"
+                          [disabled]="restoreBusyId() === acc.id"
+                          (click)="restoreArchivedAccount(acc)"
+                          [attr.aria-label]="'Restaurar cuenta ' + acc.name"
+                        >
+                          <app-icon name="restore" [size]="16" />
+                          <span>Restaurar cuenta</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (selectedAccountForHistory(); as historyAcc) {
+            <section class="account-history-panel" aria-label="Historial de cuenta">
+              <div class="history-panel-header">
+                <div>
+                  <h3>Historial de {{ historyAcc.name }}</h3>
+                  <p>{{ historyAcc.type }} · Estado: {{ historyAcc.isArchived ? 'Archivada' : 'Activa' }} · Saldo inicial: {{ historyAcc.initialBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }} · Saldo actual: {{ historyAcc.currentBalance | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}</p>
+                </div>
+                <button type="button" class="acc-secondary-btn" (click)="closeAccountHistory()">Cerrar historial</button>
+              </div>
+              @if (financialFacade.isDemoMode()) {
+                <p class="demo-audit-notice">Modo demo local: eventos de auditoría simulados en memoria (no persistidos en Supabase).</p>
+              }
+              @if (selectedAccountHistory(); as hist) {
+                <div class="history-columns">
+                  <div>
+                    <h4>Ingresos ({{ hist.incomes.length }})</h4>
+                    @for (inc of hist.incomes; track inc.id) {
+                      <p class="history-entry">{{ inc.receivedDate }} · {{ inc.sourceName }} · {{ inc.amount | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}{{ inc.isReversed ? ' (Revertido)' : '' }}</p>
+                    } @empty {
+                      <p class="history-empty">Sin ingresos registrados.</p>
+                    }
+                  </div>
+                  <div>
+                    <h4>Pagos ({{ hist.payments.length }})</h4>
+                    @for (pay of hist.payments; track pay.id) {
+                      <p class="history-entry">{{ pay.paymentDate }} · {{ pay.paymentType }} · {{ pay.amount | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}{{ pay.isReversed ? ' (Revertido)' : '' }}</p>
+                    } @empty {
+                      <p class="history-empty">Sin pagos registrados.</p>
+                    }
+                  </div>
+                  <div>
+                    <h4>Transferencias ({{ hist.transfers.length }})</h4>
+                    @for (tx of hist.transfers; track tx.id) {
+                      <p class="history-entry">{{ tx.transferDate }} · {{ tx.amount | currency:'COP':'symbol-narrow':'1.2-2':'es-CO' }}{{ tx.isReversed ? ' (Revertida)' : '' }}</p>
+                    } @empty {
+                      <p class="history-empty">Sin transferencias registradas.</p>
+                    }
+                  </div>
+                  <div>
+                    <h4>Trazabilidad de estado ({{ hist.auditTrail.length }})</h4>
+                    @for (evt of hist.auditTrail; track evt.id) {
+                      <p class="history-entry">{{ evt.createdAt | slice:0:19 }} · {{ evt.eventType }}</p>
+                    } @empty {
+                      <p class="history-empty">Sin eventos de cambio de estado.</p>
+                    }
+                  </div>
+                </div>
+              }
+            </section>
+          }
         </section>
       }
 
       <!-- Pestaña 5: Créditos y Amortización -->
       @if (activeTab() === 'credits') {
         <section class="tab-panel" aria-label="Gestión de Créditos">
-          <app-credits-manager />
+          @defer {
+            <app-credits-manager />
+          }
         </section>
       }
 
       <!-- Pestaña 6: Tarjetas de Crédito y Compras Diferidas -->
       @if (activeTab() === 'cards') {
         <section class="tab-panel" aria-label="Tarjetas de Crédito">
-          <app-credit-cards-manager />
+          @defer {
+            <app-credit-cards-manager />
+          }
         </section>
       }
 
       <!-- Pestaña 7: Simuladores Financieros -->
       @if (activeTab() === 'simulators') {
         <section class="tab-panel" aria-label="Simuladores Financieros">
-          <app-financial-simulators />
+          @defer {
+            <app-financial-simulators />
+          }
         </section>
       }
     </main>
@@ -795,7 +962,7 @@
           <div class="form-field">
             <label class="field-label" for="inc-acc">Cuenta Destino</label>
             <select id="inc-acc" formControlName="accountId" class="field-input">
-              @for (acc of accounts(); track acc.id) {
+              @for (acc of activeAccounts(); track acc.id) {
                 <option [value]="acc.id">{{ acc.name }} (Saldo: {{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</option>
               }
             </select>
@@ -902,7 +1069,7 @@
           <div class="form-field">
             <label class="field-label" for="pay-acc">Cuenta Origen de Fondos</label>
             <select id="pay-acc" formControlName="accountId" class="field-input">
-              @for (acc of accounts(); track acc.id) {
+              @for (acc of activeAccounts(); track acc.id) {
                 <option [value]="acc.id">{{ acc.name }} (Disponible: {{ acc.currentBalance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }})</option>
               }
             </select>
@@ -940,3 +1107,29 @@
     </div>
   }
 </div>
+
+@if (accountToDelete(); as account) {
+  <app-account-delete-dialog
+    mode="delete"
+    [name]="account.name"
+    [busy]="deleteBusy()"
+    [error]="deleteError()"
+    [hasHistory]="deleteHasHistory()"
+    [reason]="deleteReason()"
+    (reasonChange)="deleteReason.set($event)"
+    (dismiss)="accountToDelete.set(null)"
+    (archive)="confirmAccountDeletion(true)"
+    (confirm)="confirmAccountDeletion()"
+  />
+}
+
+@if (accountToArchive(); as account) {
+  <app-account-delete-dialog
+    mode="archive"
+    [name]="account.name"
+    [busy]="archiveBusy()"
+    [error]="archiveError()"
+    (dismiss)="accountToArchive.set(null)"
+    (confirm)="confirmAccountArchive()"
+  />
+}

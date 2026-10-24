@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { DebtTrackerComponent } from './debt-tracker.component';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FinancialFacade } from '../../core/state/financial.facade';
@@ -9,7 +10,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 @Component({
   selector: 'app-credits-manager',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, IconComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, DebtTrackerComponent],
   templateUrl: './credits-manager.component.html',
   styleUrl: './credits-manager.component.scss',
 })
@@ -17,7 +18,7 @@ export class CreditsManagerComponent {
   readonly financialFacade = inject(FinancialFacade);
   private readonly fb = inject(FormBuilder);
 
-  readonly loans = this.financialFacade.loans;
+  readonly loans = computed(() => this.financialFacade.loans().filter(credit => !credit.trackingStartDate));
   readonly period = this.financialFacade.selectedPeriod;
 
   // Estados de interfaz
@@ -191,7 +192,8 @@ export class CreditsManagerComponent {
     }
   }
 
-  formatMoney(amount: number): string {
+  formatMoney(amount: number | null): string {
+    if (amount === null) return 'No registrado';
     return '$' + (amount || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 }

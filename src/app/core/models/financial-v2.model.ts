@@ -74,7 +74,14 @@ export interface CreditProduct {
   status: ProductStatus;
 
   // Montos y Cupos
-  originalPrincipal: number; // Capital original desembolsado
+  originalPrincipal: number | null; // Capital original desembolsado
+  trackingStartDate?: string;
+  openingPrincipalBalance?: number;
+  nextDueDate?: string;
+  agreedInstallment?: number;
+  knownInterestMonthly?: number;
+  interestRateKnown?: boolean;
+  obligationKind?: 'FINANCED_DEBT' | 'BALANCE_COMMITMENT';
   currentPrincipalBalance: number; // Saldo de capital adeudado actual
   approvedCreditLimit?: number; // Para tarjetas: cupo aprobado
   usedCreditLimit?: number; // Para tarjetas: cupo utilizado
@@ -339,6 +346,35 @@ export interface FinancialAuditLogEntry {
   idempotencyKey?: string;
   payload: Record<string, unknown>;
   createdAt: string;
+  isSimulatedLocal?: boolean;
+}
+
+export interface FinancialAccountDeletionAudit {
+  id: string;
+  accountId: string;
+  accountName: string;
+  institutionId?: string;
+  accountType: AccountType;
+  ownerUserId: string;
+  deletedBy: string;
+  deletedAt: string;
+  deletionReason?: string;
+  operationId: string;
+  metadata: Record<string, unknown>;
+  isSimulatedLocal?: boolean;
+}
+
+export interface DeleteAccountOptions {
+  reason?: string;
+  operationId?: string;
+}
+
+export interface AccountHistorySummary {
+  accountId: string;
+  incomes: Income[];
+  payments: ObligationPayment[];
+  transfers: InternalAccountTransfer[];
+  auditTrail: FinancialAuditLogEntry[];
 }
 
 /**

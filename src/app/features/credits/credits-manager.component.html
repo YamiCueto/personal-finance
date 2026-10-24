@@ -1,4 +1,7 @@
 <div class="credits-manager-container" data-testid="credits-manager">
+  @defer {
+    <app-debt-tracker />
+  }
   <!-- Cabecera de Sección -->
   <div class="section-header">
     <div class="header-titles">
@@ -37,7 +40,7 @@
   }
 
   <!-- Lista de Créditos Activos -->
-  @if (loans().length === 0) {
+  @if (financialFacade.loans().length === 0) {
     <div class="empty-state" data-testid="empty-credits">
       <div class="empty-icon">
         <app-icon name="document-text" [size]="28" />

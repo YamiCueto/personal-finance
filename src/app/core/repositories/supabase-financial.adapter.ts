@@ -1,11 +1,18 @@
 import { Injectable, inject } from '@angular/core';
+import { DebtHistory, DebtReconciliation, ExistingDebtInput, ReconcileDebtInput, validateExistingDebt } from '../models/debt-tracking.model';
+import { ObligationPayment } from '../models/financial-v2.model';
 import { SupabaseService } from '../services/supabase.service';
 import {
+  AccountHistorySummary,
+  DeleteAccountOptions,
   FinancialAccount,
+  FinancialAccountDeletionAudit,
+  FinancialAuditLogEntry,
   FinancialInstitution,
   CreditProduct,
   PeriodObligation,
   Income,
+  InternalAccountTransfer,
   CreditCardPurchase,
 } from '../models/financial-v2.model';
 import {
@@ -129,14 +136,87 @@ export class SupabaseFinancialAdapter
     return this.mapAccount(data);
   }
 
-  async archiveAccount(userId: string, accountId: string): Promise<void> {
-    const { error } = await this.client
-      .from('accounts')
-      .update({ is_archived: true, updated_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .eq('id', accountId);
-
+  async archiveAccount(userId: string, accountId: string, idempotencyKey?: string): Promise<void> {
+    const payload: Record<string, unknown> = {
+      p_user_id: userId,
+      p_account_id: accountId,
+    };
+    if (idempotencyKey !== undefined) {
+      payload['p_idempotency_key'] = idempotencyKey;
+    }
+    const { error } = await this.client.rpc('archive_financial_account', payload);
     if (error) throw new Error(error.message);
+  }
+
+  async restoreAccount(userId: string, accountId: string, idempotencyKey?: string): Promise<void> {
+    const payload: Record<string, unknown> = {
+      p_user_id: userId,
+      p_account_id: accountId,
+    };
+    if (idempotencyKey !== undefined) {
+      payload['p_idempotency_key'] = idempotencyKey;
+    }
+    const { error } = await this.client.rpc('restore_financial_account', payload);
+    if (error) throw new Error(error.message);
+  }
+
+  async deleteAccount(userId: string, accountId: string, options?: DeleteAccountOptions): Promise<void> {
+    const payload: Record<string, unknown> = {
+      p_user_id: userId,
+      p_account_id: accountId,
+    };
+    if (options?.reason !== undefined) {
+      payload['p_reason'] = options.reason;
+    }
+    if (options?.operationId !== undefined) {
+      payload['p_operation_id'] = options.operationId;
+    }
+    const { error } = await this.client.rpc('delete_financial_account', payload);
+    if (error) throw new Error(error.message);
+  }
+
+  async getAccountDeletionAudit(userId: string): Promise<FinancialAccountDeletionAudit[]> {
+    const { data, error } = await this.client
+      .from('financial_account_deletion_audit')
+      .select('*')
+      .eq('owner_user_id', userId)
+      .order('deleted_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data || []).map((raw: any) => this.mapAccountDeletionAudit(raw));
+  }
+
+  async getAccountAuditTrail(userId: string, accountId?: string): Promise<FinancialAuditLogEntry[]> {
+    let query = this.client
+      .from('financial_audit_log')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('entity_type', 'accounts')
+      .order('created_at', { ascending: false });
+    if (accountId) {
+      query = query.eq('entity_id', accountId);
+    }
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data || []).map((raw: any) => this.mapFinancialAuditLog(raw));
+  }
+
+  async getAccountHistory(userId: string, accountId: string): Promise<AccountHistorySummary> {
+    const [incomesRes, paymentsRes, transfersRes, auditRes] = await Promise.all([
+      this.client.from('incomes').select('*').eq('user_id', userId).eq('account_id', accountId).order('received_date', { ascending: false }),
+      this.client.from('obligation_payments').select('*').eq('user_id', userId).eq('account_id', accountId).order('payment_date', { ascending: false }),
+      this.client.from('internal_transfers').select('*').eq('user_id', userId).or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`).order('transfer_date', { ascending: false }),
+      this.getAccountAuditTrail(userId, accountId),
+    ]);
+    if (incomesRes.error || paymentsRes.error || transfersRes.error) {
+      throw new Error((incomesRes.error || paymentsRes.error || transfersRes.error)!.message);
+    }
+    return {
+      accountId,
+      incomes: (incomesRes.data || []).map(this.mapIncome),
+      payments: (paymentsRes.data || []).map((raw: any) => this.mapObligationPayment(raw)),
+      transfers: (transfersRes.data || []).map((raw: any) => this.mapInternalTransfer(raw)),
+      auditTrail: auditRes,
+    };
   }
 
   // --- REPOSITORIO DE CRÉDITOS ---
@@ -150,6 +230,128 @@ export class SupabaseFinancialAdapter
 
     if (error) throw new Error(error.message);
     return (data || []).map(this.mapCreditProduct);
+  }
+
+  async registerExistingDebt(userId: string, dto: ExistingDebtInput): Promise<CreditProduct> {
+    validateExistingDebt(dto);
+    const { data, error } = await this.client.rpc('register_existing_debt', { p_user_id: userId, p_input: dto });
+    if (error) throw new Error(error.message);
+    return this.mapCreditProduct(data);
+  }
+
+  async getDebtHistory(userId: string, creditId: string): Promise<DebtHistory> {
+    const { data: obligations, error } = await this.client.from('period_obligations').select('*').eq('user_id', userId).eq('credit_product_id', creditId).order('period_year').order('period_month');
+    if (error) throw new Error(error.message);
+    const ids = (obligations || []).map(o => o.id);
+    const [payments, reconciliations] = await Promise.all([
+      ids.length ? this.client.from('obligation_payments').select('*').eq('user_id', userId).in('obligation_id', ids).order('payment_date') : Promise.resolve({ data: [], error: null }),
+      this.client.from('debt_reconciliations').select('*').eq('user_id', userId).eq('credit_product_id', creditId).order('statement_date'),
+    ]);
+    if (payments.error || reconciliations.error) throw new Error((payments.error || reconciliations.error)!.message);
+    return {
+      obligations: (obligations || []).map(this.mapPeriodObligation),
+      payments: (payments.data || []).map(raw => this.mapObligationPayment(raw)),
+      reconciliations: (reconciliations.data || []).map(raw => this.mapDebtReconciliation(raw)),
+    };
+  }
+
+  async reconcileDebt(userId: string, dto: ReconcileDebtInput): Promise<DebtReconciliation> {
+    const { data, error } = await this.client.rpc('reconcile_debt', { p_user_id: userId, p_input: dto });
+    if (error) throw new Error(error.message);
+    return this.mapDebtReconciliation(data);
+  }
+
+  private toFiniteMoney(value: unknown): number {
+    const n = Number(value ?? 0);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  private mapObligationPayment(raw: any): ObligationPayment {
+    return {
+      id: String(raw.id || ''),
+      userId: String(raw.user_id || raw.userId || ''),
+      obligationId: String(raw.obligation_id || raw.obligationId || ''),
+      accountId: String(raw.account_id || raw.accountId || ''),
+      amount: this.toFiniteMoney(raw.amount),
+      paymentType: raw.payment_type || raw.paymentType || 'REGULAR_INSTALLMENT',
+      paymentDate: String(raw.payment_date || raw.paymentDate || '').slice(0, 10),
+      appliedToCapital: this.toFiniteMoney(raw.applied_to_capital ?? raw.appliedToCapital),
+      appliedToInterest: this.toFiniteMoney(raw.applied_to_interest ?? raw.appliedToInterest),
+      appliedToInsurance: this.toFiniteMoney(raw.applied_to_insurance ?? raw.appliedToInsurance),
+      appliedToFees: this.toFiniteMoney(raw.applied_to_fees ?? raw.appliedToFees),
+      referenceNumber: raw.reference_number ?? raw.referenceNumber ?? undefined,
+      idempotencyKey: raw.idempotency_key ?? raw.idempotencyKey ?? undefined,
+      isReversed: Boolean(raw.is_reversed ?? raw.isReversed),
+      reversedAt: raw.reversed_at ?? raw.reversedAt ?? undefined,
+      reversalReason: raw.reversal_reason ?? raw.reversalReason ?? undefined,
+      notes: raw.notes ?? undefined,
+      createdAt: String(raw.created_at || raw.createdAt || ''),
+    };
+  }
+
+  private mapDebtReconciliation(raw: any): DebtReconciliation {
+    return {
+      id: String(raw.id || ''),
+      userId: String(raw.user_id || raw.userId || ''),
+      creditProductId: String(raw.credit_product_id || raw.creditProductId || ''),
+      statementDate: String(raw.statement_date || raw.statementDate || '').slice(0, 10),
+      calculatedBalance: this.toFiniteMoney(raw.calculated_balance ?? raw.calculatedBalance),
+      reportedBalance: this.toFiniteMoney(raw.reported_balance ?? raw.reportedBalance),
+      difference: this.toFiniteMoney(raw.difference),
+      reason: String(raw.reason || ''),
+      idempotencyKey: String(raw.idempotency_key || raw.idempotencyKey || ''),
+      createdAt: String(raw.created_at || raw.createdAt || ''),
+    };
+  }
+
+  private mapAccountDeletionAudit(raw: any): FinancialAccountDeletionAudit {
+    return {
+      id: String(raw.id || ''),
+      accountId: String(raw.account_id || raw.accountId || ''),
+      accountName: String(raw.account_name || raw.accountName || ''),
+      institutionId: raw.institution_id ?? raw.institutionId ?? undefined,
+      accountType: raw.account_type || raw.accountType || 'SAVINGS',
+      ownerUserId: String(raw.owner_user_id || raw.ownerUserId || ''),
+      deletedBy: String(raw.deleted_by || raw.deletedBy || ''),
+      deletedAt: String(raw.deleted_at || raw.deletedAt || ''),
+      deletionReason: raw.deletion_reason ?? raw.deletionReason ?? undefined,
+      operationId: String(raw.operation_id || raw.operationId || ''),
+      metadata: typeof raw.metadata === 'object' && raw.metadata !== null ? raw.metadata : {},
+      isSimulatedLocal: false,
+    };
+  }
+
+  private mapFinancialAuditLog(raw: any): FinancialAuditLogEntry {
+    return {
+      id: String(raw.id || ''),
+      userId: String(raw.user_id || raw.userId || ''),
+      eventType: String(raw.event_type || raw.eventType || ''),
+      entityType: String(raw.entity_type || raw.entityType || ''),
+      entityId: String(raw.entity_id || raw.entityId || ''),
+      amount: raw.amount != null ? this.toFiniteMoney(raw.amount) : undefined,
+      idempotencyKey: raw.idempotency_key ?? raw.idempotencyKey ?? undefined,
+      payload: typeof raw.payload === 'object' && raw.payload !== null ? raw.payload : {},
+      createdAt: String(raw.created_at || raw.createdAt || ''),
+      isSimulatedLocal: false,
+    };
+  }
+
+  private mapInternalTransfer(raw: any): InternalAccountTransfer {
+    return {
+      id: String(raw.id || ''),
+      userId: String(raw.user_id || raw.userId || ''),
+      fromAccountId: String(raw.from_account_id || raw.fromAccountId || ''),
+      toAccountId: String(raw.to_account_id || raw.toAccountId || ''),
+      amount: this.toFiniteMoney(raw.amount),
+      feeAmount: this.toFiniteMoney(raw.fee_amount ?? raw.feeAmount),
+      transferDate: String(raw.transfer_date || raw.transferDate || '').slice(0, 10),
+      idempotencyKey: raw.idempotency_key ?? raw.idempotencyKey ?? undefined,
+      isReversed: Boolean(raw.is_reversed ?? raw.isReversed),
+      reversedAt: raw.reversed_at ?? raw.reversedAt ?? undefined,
+      reversalReason: raw.reversal_reason ?? raw.reversalReason ?? undefined,
+      notes: raw.notes ?? undefined,
+      createdAt: String(raw.created_at || raw.createdAt || ''),
+    };
   }
 
   async getCreditProductById(userId: string, creditId: string): Promise<CreditProduct | null> {
@@ -253,6 +455,11 @@ export class SupabaseFinancialAdapter
     const product = await this.getCreditProductById(userId, dto.creditProductId);
     if (!product) {
       throw new Error('Producto de crédito no encontrado o no pertenece al usuario');
+    }
+    if (product.trackingStartDate) {
+      const { data, error } = await this.client.rpc('generate_tracked_installment', { p_user_id: userId, p_credit_product_id: product.id, p_year: dto.periodYear, p_month: dto.periodMonth });
+      if (error) throw new Error(error.message);
+      return this.mapPeriodObligation(data);
     }
 
     const { data: existing, error: existingError } = await this.client
@@ -431,12 +638,13 @@ export class SupabaseFinancialAdapter
       p_amount: dto.amount,
       p_payment_type: dto.paymentType || 'REGULAR_INSTALLMENT',
       p_idempotency_key: dto.idempotencyKey || null,
-      p_applied_to_capital: dto.allocation?.appliedToCapital || null,
-      p_applied_to_interest: dto.allocation?.appliedToInterest || null,
-      p_applied_to_insurance: dto.allocation?.appliedToInsurance || null,
-      p_applied_to_fees: dto.allocation?.appliedToFees || null,
+      p_applied_to_capital: dto.allocation?.appliedToCapital ?? null,
+      p_applied_to_interest: dto.allocation?.appliedToInterest ?? null,
+      p_applied_to_insurance: dto.allocation?.appliedToInsurance ?? null,
+      p_applied_to_fees: dto.allocation?.appliedToFees ?? null,
       p_reference_number: dto.referenceNumber || null,
       p_notes: dto.notes || null,
+      p_payment_date: dto.paymentDate || new Date().toISOString().slice(0, 10),
     });
 
     if (error) throw new Error(error.message);
@@ -569,7 +777,15 @@ export class SupabaseFinancialAdapter
       name: raw.name,
       type: raw.type,
       status: raw.status,
-      originalPrincipal: Number(raw.original_principal || 0),
+      originalPrincipal: raw.original_principal == null ? null : Number(raw.original_principal),
+      trackingStartDate: raw.tracking_start_date,
+      openingPrincipalBalance: raw.opening_principal_balance == null ? undefined : Number(raw.opening_principal_balance),
+      nextDueDate: raw.next_due_date,
+      agreedInstallment: raw.agreed_installment == null ? undefined : Number(raw.agreed_installment),
+      knownInterestMonthly: raw.known_interest_monthly == null ? undefined : Number(raw.known_interest_monthly),
+      obligationKind: raw.obligation_kind,
+      interestRateKnown: raw.nominal_rate_monthly != null,
+      notes: raw.notes,
       currentPrincipalBalance: Number(raw.current_principal_balance || 0),
       approvedCreditLimit: raw.approved_credit_limit ? Number(raw.approved_credit_limit) : undefined,
       usedCreditLimit: raw.used_credit_limit ? Number(raw.used_credit_limit) : undefined,

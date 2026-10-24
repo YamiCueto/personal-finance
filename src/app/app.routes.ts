@@ -1,6 +1,17 @@
-import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
-import { guestGuard } from './core/guards/guest.guard';
+import { EnvironmentInjector, inject, runInInjectionContext } from '@angular/core';
+import { CanActivateFn, GuardResult, Routes } from '@angular/router';
+
+const lazyAuthGuard: CanActivateFn = async (route, state) => {
+  const injector = inject(EnvironmentInjector);
+  const { authGuard } = await import('./core/guards/auth.guard');
+  return runInInjectionContext(injector, () => authGuard(route, state)) as Promise<GuardResult>;
+};
+
+const lazyGuestGuard: CanActivateFn = async (route, state) => {
+  const injector = inject(EnvironmentInjector);
+  const { guestGuard } = await import('./core/guards/guest.guard');
+  return runInInjectionContext(injector, () => guestGuard(route, state)) as Promise<GuardResult>;
+};
 
 export const routes: Routes = [
   {
@@ -10,25 +21,25 @@ export const routes: Routes = [
   },
   {
     path: 'app',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/app-shell/app-shell.component').then((m) => m.AppShellComponent),
+    canActivate: [lazyAuthGuard],
+    loadChildren: () =>
+      import('./features/app-shell/app-shell.component').then((m) => m.APP_SHELL_ROUTES),
   },
   {
     path: 'auth/login',
-    canActivate: [guestGuard],
+    canActivate: [lazyGuestGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'auth/signup',
-    canActivate: [guestGuard],
+    canActivate: [lazyGuestGuard],
     loadComponent: () =>
       import('./features/auth/signup/signup.component').then((m) => m.SignupComponent),
   },
   {
     path: 'auth/forgot-password',
-    canActivate: [guestGuard],
+    canActivate: [lazyGuestGuard],
     loadComponent: () =>
       import('./features/auth/forgot-password/forgot-password.component').then(
         (m) => m.ForgotPasswordComponent

@@ -1,6 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { ExistingDebtInput, ReconcileDebtInput } from '../models/debt-tracking.model';
 import {
+  AccountHistorySummary,
+  DeleteAccountOptions,
   FinancialAccount,
+  FinancialAccountDeletionAudit,
+  FinancialAuditLogEntry,
   CreditProduct,
   PeriodObligation,
   Income,
@@ -325,11 +330,35 @@ export class FinancialFacade {
     return acc;
   }
 
-  async archiveAccount(accountId: string): Promise<void> {
-    await this.accountsService.archiveAccount(accountId);
+  async archiveAccount(accountId: string, idempotencyKey?: string): Promise<void> {
+    await this.accountsService.archiveAccount(accountId, idempotencyKey);
     this.accounts.update((list) =>
       list.map((a) => (a.id === accountId ? { ...a, isArchived: true } : a))
     );
+  }
+
+  async restoreAccount(accountId: string, idempotencyKey?: string): Promise<void> {
+    await this.accountsService.restoreAccount(accountId, idempotencyKey);
+    this.accounts.update((list) =>
+      list.map((a) => (a.id === accountId ? { ...a, isArchived: false } : a))
+    );
+  }
+
+  async deleteAccount(accountId: string, options?: DeleteAccountOptions): Promise<void> {
+    await this.accountsService.deleteAccount(accountId, options);
+    this.accounts.update(list => list.filter(account => account.id !== accountId));
+  }
+
+  getAccountHistory(accountId: string): Promise<AccountHistorySummary> {
+    return this.accountsService.getAccountHistory(accountId);
+  }
+
+  getAccountDeletionAudit(): Promise<FinancialAccountDeletionAudit[]> {
+    return this.accountsService.getAccountDeletionAudit();
+  }
+
+  getAccountAuditTrail(accountId?: string): Promise<FinancialAuditLogEntry[]> {
+    return this.accountsService.getAccountAuditTrail(accountId);
   }
 
   async recordIncome(dto: CreateIncomeDTO): Promise<FinancialOperationResult> {
@@ -360,6 +389,26 @@ export class FinancialFacade {
     const cred = await this.creditsService.createCreditProduct(dto);
     await this.loadPeriodData();
     return cred;
+  }
+
+  async registerExistingDebt(dto: ExistingDebtInput): Promise<CreditProduct> {
+    const product = await this.creditsService.registerExistingDebt(dto);
+    await this.loadPeriodData();
+    return product;
+  }
+
+  getDebtHistory(creditId: string) { return this.creditsService.getDebtHistory(creditId); }
+
+  async reconcileDebt(dto: ReconcileDebtInput) {
+    const result = await this.creditsService.reconcileDebt(dto);
+    await this.loadPeriodData();
+    return result;
+  }
+
+  async reversePayment(operationId: string, reason: string) {
+    const result = await this.operationsService.reverseOperation({ operationId, operationType: 'PAYMENT', reason });
+    await this.loadPeriodData();
+    return result;
   }
 
   async createCreditCardPurchase(dto: CreateCreditCardPurchaseDTO): Promise<CreditCardPurchase> {

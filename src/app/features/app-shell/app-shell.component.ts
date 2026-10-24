@@ -1,13 +1,18 @@
 import { MotionValueDirective } from '../../shared/motion/motion-value.directive';
+import { AccountDeleteDialogComponent } from '../../shared/components/account-delete-dialog.component';
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component';
 import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, Routes } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialFacade } from '../../core/state/financial.facade';
+import { provideFinancialCore } from '../../core/providers/financial-core.provider';
+import { environment } from '../../../environments/environment';
 import {
+  AccountHistorySummary,
   FinancialAccount,
+  FinancialAccountDeletionAudit,
   Income,
   PeriodObligation,
 } from '../../core/models/financial-v2.model';
@@ -23,6 +28,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
   selector: 'app-app-shell',
   standalone: true,
   imports: [
+    AccountDeleteDialogComponent,
     MotionValueDirective,
     BrandLogoComponent,
     CommonModule,
@@ -87,6 +93,136 @@ export class AppShellComponent implements OnInit {
 
   // Enlace reactivo directo a la fachada financiera
   readonly accounts = this.financialFacade.accounts;
+  readonly activeAccounts = computed(() => this.accounts().filter(account => !account.isArchived));
+  readonly archivedAccounts = computed(() => this.accounts().filter(account => account.isArchived));
+  readonly accountViewFilter = signal<'all' | 'active' | 'archived'>('all');
+  readonly accountToDelete = signal<FinancialAccount | null>(null);
+  readonly accountToArchive = signal<FinancialAccount | null>(null);
+  readonly deleteReason = signal('');
+  readonly deleteBusy = signal(false);
+  readonly deleteError = signal<string | null>(null);
+  readonly deleteHasHistory = signal(false);
+  readonly archiveBusy = signal(false);
+  readonly archiveError = signal<string | null>(null);
+  readonly restoreBusyId = signal<string | null>(null);
+  readonly selectedAccountForHistory = signal<FinancialAccount | null>(null);
+  readonly selectedAccountHistory = signal<AccountHistorySummary | null>(null);
+  readonly accountDeletionAudit = signal<FinancialAccountDeletionAudit[]>([]);
+  private archiveIdempotencyKey = '';
+  private deleteOperationId = '';
+
+  requestAccountDeletion(account: FinancialAccount): void {
+    this.deleteError.set(null);
+    this.deleteHasHistory.set(false);
+    this.deleteReason.set('');
+    this.deleteOperationId = crypto.randomUUID();
+    this.accountToArchive.set(null);
+    this.accountToDelete.set(account);
+  }
+
+  async confirmAccountDeletion(archive = false): Promise<void> {
+    const account = this.accountToDelete();
+    if (!account || this.deleteBusy()) return;
+    this.deleteBusy.set(true);
+    this.deleteError.set(null);
+    try {
+      if (archive) {
+        await this.financialFacade.archiveAccount(account.id, crypto.randomUUID());
+        this.accountToDelete.set(null);
+        if (this.selectedAccountForHistory()?.id === account.id) {
+          const updated = this.accounts().find(a => a.id === account.id) || null;
+          this.selectedAccountForHistory.set(updated);
+          this.selectedAccountHistory.set(await this.financialFacade.getAccountHistory(account.id));
+        }
+        this.actionSuccess.set('Cuenta archivada. Su historial se conserva.');
+        return;
+      }
+      const reason = this.deleteReason().trim();
+      if (reason) {
+        await this.financialFacade.deleteAccount(account.id, { reason, operationId: this.deleteOperationId });
+      } else {
+        await this.financialFacade.deleteAccount(account.id);
+      }
+      this.accountToDelete.set(null);
+      if (this.selectedAccountForHistory()?.id === account.id) {
+        this.closeAccountHistory();
+      }
+      this.accountDeletionAudit.set(await this.financialFacade.getAccountDeletionAudit());
+      this.actionSuccess.set('Cuenta eliminada correctamente.');
+    } catch (error: any) {
+      this.deleteError.set(error?.message || 'No se pudo eliminar la cuenta.');
+      this.deleteHasHistory.set((error?.message || '').includes('historial financiero'));
+    } finally {
+      this.deleteBusy.set(false);
+    }
+  }
+
+  requestAccountArchive(account: FinancialAccount): void {
+    this.archiveError.set(null);
+    this.archiveIdempotencyKey = crypto.randomUUID();
+    this.accountToDelete.set(null);
+    this.accountToArchive.set(account);
+  }
+
+  async confirmAccountArchive(): Promise<void> {
+    const account = this.accountToArchive();
+    if (!account || this.archiveBusy()) return;
+    this.archiveBusy.set(true);
+    this.archiveError.set(null);
+    try {
+      await this.financialFacade.archiveAccount(account.id, this.archiveIdempotencyKey);
+      this.accountToArchive.set(null);
+      if (this.selectedAccountForHistory()?.id === account.id) {
+        const updated = this.accounts().find(a => a.id === account.id) || null;
+        this.selectedAccountForHistory.set(updated);
+        this.selectedAccountHistory.set(await this.financialFacade.getAccountHistory(account.id));
+      }
+      this.actionSuccess.set('Cuenta archivada. Su historial se conserva.');
+    } catch (error: any) {
+      this.archiveError.set(error?.message || 'No se pudo archivar la cuenta.');
+    } finally {
+      this.archiveBusy.set(false);
+    }
+  }
+
+  async restoreArchivedAccount(account: FinancialAccount): Promise<void> {
+    if (this.restoreBusyId()) return;
+    this.restoreBusyId.set(account.id);
+    this.clearFeedback();
+    try {
+      await this.financialFacade.restoreAccount(account.id, crypto.randomUUID());
+      if (this.selectedAccountForHistory()?.id === account.id) {
+        const updated = this.accounts().find(a => a.id === account.id) || null;
+        this.selectedAccountForHistory.set(updated);
+        this.selectedAccountHistory.set(await this.financialFacade.getAccountHistory(account.id));
+      }
+      this.actionSuccess.set(`Cuenta "${account.name}" restaurada y activa nuevamente.`);
+    } catch (error: any) {
+      this.actionError.set(error?.message || 'No se pudo restaurar la cuenta.');
+    } finally {
+      this.restoreBusyId.set(null);
+    }
+  }
+
+  async openAccountHistory(account: FinancialAccount): Promise<void> {
+    this.clearFeedback();
+    try {
+      const [history, deletions] = await Promise.all([
+        this.financialFacade.getAccountHistory(account.id),
+        this.financialFacade.getAccountDeletionAudit(),
+      ]);
+      this.selectedAccountForHistory.set(account);
+      this.selectedAccountHistory.set(history);
+      this.accountDeletionAudit.set(deletions);
+    } catch (error: any) {
+      this.actionError.set(error?.message || 'No se pudo cargar el historial de la cuenta.');
+    }
+  }
+
+  closeAccountHistory(): void {
+    this.selectedAccountForHistory.set(null);
+    this.selectedAccountHistory.set(null);
+  }
   readonly incomes = this.financialFacade.incomes;
   readonly obligations = this.financialFacade.periodObligations;
   readonly creditProducts = this.financialFacade.creditProducts;
@@ -288,7 +424,7 @@ export class AppShellComponent implements OnInit {
 
   openIncomeModal(): void {
     this.clearFeedback();
-    const accList = this.accounts();
+    const accList = this.activeAccounts();
     const accId = accList.length > 0 ? accList[0].id : '';
     this.incomeForm.reset({
       accountId: accId,
@@ -457,6 +593,7 @@ export class AppShellComponent implements OnInit {
         obligationId: ob.id,
         accountId: val.accountId,
         amount: paymentAmount,
+        paymentDate: val.paymentDate,
         notes: val.notes?.trim() || undefined,
       });
 
@@ -494,3 +631,13 @@ export class AppShellComponent implements OnInit {
     await this.router.navigate(['/auth/login']);
   }
 }
+
+export const APP_SHELL_ROUTES: Routes = [
+  {
+    path: '',
+    providers: [
+      provideFinancialCore(environment.providerMode ? { providerMode: environment.providerMode } : {}),
+    ],
+    component: AppShellComponent,
+  },
+];

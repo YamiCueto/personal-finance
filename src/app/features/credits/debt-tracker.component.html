@@ -1,0 +1,76 @@
+<section class="tracking" aria-label="Seguimiento de deudas">
+  <div class="toolbar"><div><h3>Cuánto debías. Cuánto has pagado. Cuánto debes.</h3><p>Registra el saldo confirmado y comienza desde tu fecha de corte. Los gastos recurrentes sin deuda total se gestionan en Obligaciones.</p></div><button type="button" (click)="openCreate()">Registrar deuda existente</button></div>
+  @if (message()) { <p role="status" class="message">{{ message() }}</p> }
+  @if (creating()) {
+    <form [formGroup]="institutionForm" (ngSubmit)="createInstitution()" class="panel"><label>¿Falta tu entidad? Registra su nombre<input formControlName="name" /></label><button type="submit" [disabled]="busy() || institutionForm.invalid">Agregar entidad acreedora</button></form>
+    <form [formGroup]="debtForm" (ngSubmit)="create()" class="panel" aria-label="Registrar deuda existente">
+      <h3>Registrar deuda existente</h3><p>No se crearán pagos anteriores. Los importes de intereses y cargos deben provenir de tu extracto; la cuota se repetirá con estos valores hasta que registres cambios.</p>
+      <div class="fields">
+        <label>Nombre de la obligación<input formControlName="name" required /></label>
+        <label>Entidad acreedora<select formControlName="institutionId" required><option value="">Seleccionar entidad</option>@for (institution of institutions(); track institution.id) { <option [value]="institution.id">{{ institution.name }}</option> }</select></label>
+        <label>Clase de obligación<select formControlName="obligationKind"><option value="FINANCED_DEBT">Deuda financiada</option><option value="BALANCE_COMMITMENT">Compromiso con saldo pendiente</option></select></label>
+        <label>Tipo<select formControlName="type"><option value="VEHICLE_LOAN">Vehículo</option><option value="CONSUMER_LOAN">Consumo</option><option value="PERSONAL_LOAN">Préstamo personal</option><option value="MERCHANT_FINANCING">Financiación comercial</option><option value="OTHER_CREDIT">Otro compromiso</option></select></label>
+        <label>Saldo confirmado por la entidad<input type="number" step="0.01" min="0.01" formControlName="openingPrincipalBalance" required /></label>
+        <label>Fecha de corte<input type="date" formControlName="trackingStartDate" required /></label>
+        <label>Próximo vencimiento<input type="date" formControlName="nextDueDate" required /></label>
+        <label>Valor de la próxima cuota<input type="number" step="0.01" min="0.01" formControlName="agreedInstallment" required /></label>
+        <label>Cuotas pendientes (opcional)<input type="number" min="1" step="1" formControlName="remainingInstallments" /></label>
+        <label>Tasa mensual % (opcional)<input type="number" min="0" step="0.0001" formControlName="nominalRateMonthly" /></label>
+        <label>Intereses conocidos por cuota<input type="number" min="0" step="0.01" formControlName="knownInterestMonthly" /></label>
+        <label>Seguro por cuota<input type="number" min="0" step="0.01" formControlName="insuranceMonthly" /></label>
+        <label>Otros cargos por cuota<input type="number" min="0" step="0.01" formControlName="feesMonthly" /></label>
+        <label>Observaciones<textarea formControlName="notes"></textarea></label>
+      </div>
+      <div class="actions"><button type="button" [disabled]="busy()" (click)="creating.set(false)">Cancelar</button><button type="submit" [disabled]="busy() || debtForm.invalid">Guardar deuda</button></div>
+    </form>
+  }
+  <div class="debt-links">@for (debt of tracked(); track debt.id) { <button type="button" (click)="openDetail(debt)">{{ debt.name }} · Ver seguimiento</button> }</div>
+  @if (product(); as debt) {
+    <article class="panel" aria-label="Detalle de obligación">
+      <div class="toolbar"><div><h3>{{ debt.name }}</h3><p>{{ entity(debt) }} · {{ status(debt.status) }} · Desde {{ debt.trackingStartDate }}</p></div><button type="button" (click)="selectedId.set(null)">Cerrar detalle</button></div>
+      <div class="metrics">
+        <div><span>Saldo inicial registrado</span><strong>{{ money(debt.openingPrincipalBalance) }}</strong></div>
+        <div><span>Total desembolsado</span><strong>{{ money(totals().paid) }}</strong></div>
+        <div><span>Saldo pendiente actual</span><strong>{{ money(debt.currentPrincipalBalance) }}</strong></div>
+        <div><span>Capital amortizado</span><strong>{{ money(totals().capital) }}</strong></div>
+        <div><span>Intereses pagados</span><strong>{{ money(totals().interest) }}</strong></div>
+        <div><span>Seguros y cargos pagados</span><strong>{{ money(totals().charges) }}</strong></div>
+      </div>
+      <p>Cuotas pendientes: {{ debt.remainingInstallments ?? 'No registradas' }} · Capital original: {{ debt.originalPrincipal === null ? 'No registrado' : money(debt.originalPrincipal) }}</p>
+      <p>Tasa mensual: {{ debt.interestRateKnown ? debt.nominalRateMonthly + '%' : 'No registrada' }}. Cuotas según los intereses y cargos confirmados; no son una proyección de amortización.</p>
+      @if (debt.notes) { <p>{{ debt.notes }}</p> }
+      <div class="toolbar"><div class="actions"><button type="button" aria-label="Año anterior" (click)="year.set(year()-1)">‹</button><strong aria-live="polite">{{ year() }}</strong><button type="button" aria-label="Año siguiente" (click)="year.set(year()+1)">›</button></div><button type="button" (click)="openReconcile()">Conciliar saldo con extracto</button></div>
+      @if (summary(); as annual) {
+        <div class="metrics annual"><div><span>{{ year() === +(debt.trackingStartDate!.slice(0,4)) ? 'Saldo al inicio del seguimiento' : 'Saldo al inicio del año' }}</span><strong>{{ money(annual.opening) }}</strong></div><div><span>Cuotas generadas</span><strong>{{ annual.count }}</strong></div><div><span>Pagado en el año</span><strong>{{ money(annual.paid) }}</strong></div><div><span>Capital amortizado del año</span><strong>{{ money(annual.capital) }}</strong></div><div><span>Intereses del año</span><strong>{{ money(annual.interest) }}</strong></div><div><span>Saldo al cierre registrado</span><strong>{{ money(annual.closing) }}</strong></div></div>
+        <div class="months" aria-label="Meses del año">@for (entry of annual.months; track entry.month) { <button type="button" [class.selected]="month() === entry.month" [attr.aria-pressed]="month() === entry.month" (click)="month.set(entry.month)"><strong>{{ months[entry.month-1] }}</strong><span>{{ entry.beforeTracking ? 'Sin historial registrado' : entry.obligations.length ? 'Cuota registrada' : 'Sin cuota generada' }}</span></button> }</div>
+      }
+      @if (selectedMonth(); as current) {
+        <h4>{{ months[month()-1] }} de {{ year() }}</h4>
+        @if (current.beforeTracking) { <p>Sin historial registrado</p> } @else {
+          <p>Capital: {{ money(current.capital) }} · Intereses: {{ money(current.interest) }} · Seguros: {{ money(current.insurance) }} · Cargos: {{ money(current.fees) }}</p><p>Saldo tras los movimientos del mes: <strong>{{ money(current.balance) }}</strong></p>
+          @for (ob of current.obligations; track ob.id) {
+            <div class="installment"><p>Cuota exigible: <strong>{{ money(ob.amount) }}</strong> · Vence: {{ ob.dueDate }} · {{ status(ob.status) }}</p><p>Pendiente: {{ money(ob.amountPending) }}</p><div class="actions">@if (ob.status !== 'PAID') { <button type="button" (click)="openPayment(ob)">Registrar pago</button> }<button type="button" (click)="openPayment(ob, true)">Abono extraordinario</button></div></div>
+          } @empty { <button type="button" [disabled]="busy()" (click)="generate()">Generar cuota de {{ months[month()-1] }}</button> }
+          @for (payment of current.payments; track payment.id) {
+            <div class="payment"><strong>{{ payment.paymentDate }} · {{ money(payment.amount) }}</strong><p>Capital {{ money(payment.appliedToCapital) }} · Intereses {{ money(payment.appliedToInterest) }} · Seguro {{ money(payment.appliedToInsurance) }} · Cargos {{ money(payment.appliedToFees) }}</p><p>Referencia: {{ payment.referenceNumber || 'Sin referencia' }}</p>@if (payment.isReversed) { <p>Revertido el {{ payment.reversedAt }}: {{ payment.reversalReason }}</p> } @else { <button type="button" (click)="reversing.set(payment); reversalForm.reset()">Revertir pago</button> }</div>
+          }
+        }
+      }
+      @if (paymentObligation()) {
+        <form [formGroup]="paymentForm" (ngSubmit)="pay()" class="panel" aria-label="Registrar pago de deuda"><h4>{{ paymentForm.value.paymentType === 'PREPAYMENT_CAPITAL' ? 'Abono extraordinario a capital' : 'Pago completo o parcial' }}</h4><div class="fields">
+          <label>Cuenta de origen<select formControlName="accountId">@for (account of activeAccounts(); track account.id) { <option [value]="account.id">{{ account.name }}</option> }</select></label>
+          <label>Fecha del pago<input type="date" formControlName="paymentDate" /></label><label>Importe pagado<input type="number" min="0.01" step="0.01" formControlName="amount" (input)="syncCascadeFromAmount()" /></label>
+          @if (paymentForm.value.paymentType !== 'PREPAYMENT_CAPITAL') {
+            <label><input type="checkbox" [checked]="manualAllocation()" (change)="toggleManualAllocation($any($event.target).checked)" /> Especificar desglose manual</label>
+            <label>Capital pagado<input type="number" min="0" step="0.01" formControlName="capital" [readonly]="!manualAllocation()" (input)="manualAllocation.set(true)" /></label><label>Intereses pagados<input type="number" min="0" step="0.01" formControlName="interest" [readonly]="!manualAllocation()" (input)="manualAllocation.set(true)" /></label><label>Seguro pagado<input type="number" min="0" step="0.01" formControlName="insurance" [readonly]="!manualAllocation()" (input)="manualAllocation.set(true)" /></label><label>Cargos pagados<input type="number" min="0" step="0.01" formControlName="fees" [readonly]="!manualAllocation()" (input)="manualAllocation.set(true)" /></label>
+          }
+          <label>Referencia<input formControlName="reference" /></label></div><div class="actions"><button type="button" [disabled]="busy()" (click)="paymentObligation.set(null)">Cancelar pago</button><button type="submit" [disabled]="busy() || paymentForm.invalid">Guardar pago</button></div></form>
+      }
+      @if (reconciling()) {
+        <form [formGroup]="reconcileForm" (ngSubmit)="reconcile()" class="panel" aria-label="Conciliación"><h4>Conciliar saldo con extracto</h4><p>Saldo calculado por BRAVISO: {{ money(debt.currentPrincipalBalance) }}</p><p>El extracto debe incluir todos los movimientos registrados.</p><div class="fields"><label>Fecha del extracto<input type="date" formControlName="statementDate" /></label><label>Saldo reportado por la entidad<input type="number" min="0" step="0.01" formControlName="reportedBalance" /></label><label>Motivo del ajuste<textarea formControlName="reason"></textarea></label></div><p>Diferencia: {{ money((reconcileForm.value.reportedBalance ?? debt.currentPrincipalBalance) - debt.currentPrincipalBalance) }}</p><div class="actions"><button type="button" [disabled]="busy()" (click)="reconciling.set(false)">Cancelar conciliación</button><button type="submit" [disabled]="busy() || reconcileForm.invalid">Registrar ajuste</button></div></form>
+      }
+      @if (reversing()) { <form [formGroup]="reversalForm" (ngSubmit)="reverse()" class="panel"><label>Motivo del reverso<input formControlName="reason" /></label><div class="actions"><button type="button" [disabled]="busy()" (click)="reversing.set(null)">Cancelar reverso</button><button type="submit" [disabled]="busy() || reversalForm.invalid">Confirmar reverso</button></div></form> }
+      <h4>Historial de conciliaciones</h4>@for (adjustment of history().reconciliations; track adjustment.id) { <p>{{ adjustment.statementDate }} · Calculado {{ money(adjustment.calculatedBalance) }} → Extracto {{ money(adjustment.reportedBalance) }} · Ajuste {{ money(adjustment.difference) }} · {{ adjustment.reason }}</p> } @empty { <p>No hay conciliaciones registradas.</p> }
+    </article>
+  }
+</section>

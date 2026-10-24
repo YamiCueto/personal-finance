@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
+import { DebtHistory, DebtReconciliation, ExistingDebtInput, ReconcileDebtInput, validDate, validateExistingDebt } from '../models/debt-tracking.model';
+import { allocatePaymentCascade, trackedInstallment } from '../services/debt-history';
 import {
+  AccountHistorySummary,
+  DeleteAccountOptions,
   FinancialAccount,
+  FinancialAccountDeletionAudit,
+  FinancialAuditLogEntry,
   FinancialInstitution,
   CreditProduct,
   PeriodObligation,
@@ -60,6 +66,11 @@ export class LocalFinancialAdapter
   private paymentsMap = new Map<string, ObligationPayment[]>();
   private transfersMap = new Map<string, InternalAccountTransfer[]>();
   private creditCardPurchasesMap = new Map<string, CreditCardPurchase[]>();
+  private reconciliationsMap = new Map<string, DebtReconciliation[]>();
+  private debtRegistrations = new Map<string, { payload: string; product: CreditProduct }>();
+  private accountAuditMap = new Map<string, FinancialAuditLogEntry[]>();
+  private deletionAuditMap = new Map<string, FinancialAccountDeletionAudit[]>();
+  private accountLocks = new Set<string>();
 
   // Caché de idempotencia en memoria: user_id:key -> FinancialOperationResult
   private idempotencyStore = new Map<string, { result: FinancialOperationResult; payload: any }>();
@@ -483,6 +494,11 @@ export class LocalFinancialAdapter
   }
 
   public resetAll(): void {
+    this.reconciliationsMap.clear();
+    this.debtRegistrations.clear();
+    this.accountAuditMap.clear();
+    this.deletionAuditMap.clear();
+    this.accountLocks.clear();
     this.institutionsMap.clear();
     this.accountsMap.clear();
     this.creditProductsMap.clear();
@@ -495,6 +511,10 @@ export class LocalFinancialAdapter
   }
 
   public resetUserScenario(userId: string): void {
+    this.reconciliationsMap.delete(userId);
+    this.accountAuditMap.delete(userId);
+    this.deletionAuditMap.delete(userId);
+    for (const key of this.debtRegistrations.keys()) if (key.startsWith(`${userId}:`)) this.debtRegistrations.delete(key);
     this.institutionsMap.delete(userId);
     this.accountsMap.delete(userId);
     this.creditProductsMap.delete(userId);
@@ -584,14 +604,234 @@ export class LocalFinancialAdapter
     return acc;
   }
 
-  async archiveAccount(userId: string, accountId: string): Promise<void> {
-    const list = this.accountsMap.get(userId) || [];
-    const target = list.find((a) => a.id === accountId);
-    if (!target) {
+  async archiveAccount(userId: string, accountId: string, idempotencyKey?: string): Promise<void> {
+    this.ensureUserInitialized(userId);
+    const lockKey = `${userId}:archive:${accountId}`;
+    if (this.accountLocks.has(lockKey)) {
+      throw new Error('Operación sobre la cuenta en curso.');
+    }
+    this.accountLocks.add(lockKey);
+    try {
+      const list = this.accountsMap.get(userId) || [];
+      const target = list.find((a) => a.id === accountId);
+      if (!target || target.userId !== userId) {
+        throw new Error('Cuenta no encontrada o no pertenece al usuario');
+      }
+      const normalizedKey = idempotencyKey?.trim() || undefined;
+      const audits = this.accountAuditMap.get(userId) || [];
+      if (normalizedKey) {
+        const existing = audits.find((e) => e.idempotencyKey === normalizedKey);
+        if (existing) {
+          if (existing.entityId !== accountId || existing.eventType !== 'ACCOUNT_ARCHIVED') {
+            throw new Error(`Conflicto de idempotencia: la clave ${normalizedKey} ya fue utilizada en otra operación.`);
+          }
+          return;
+        }
+      }
+      if (target.isArchived) {
+        return;
+      }
+      const now = new Date().toISOString();
+      target.isArchived = true;
+      target.updatedAt = now;
+      const entry: FinancialAuditLogEntry = {
+        id: crypto.randomUUID(),
+        userId,
+        eventType: 'ACCOUNT_ARCHIVED',
+        entityType: 'accounts',
+        entityId: target.id,
+        amount: target.currentBalance,
+        idempotencyKey: normalizedKey,
+        payload: {
+          account_id: target.id,
+          account_name: target.name,
+          performed_by: userId,
+          operation: 'ACCOUNT_ARCHIVED',
+          previous_state: { is_archived: false },
+          new_state: { is_archived: true },
+          recorded_at: now,
+          simulated_local: true,
+        },
+        createdAt: now,
+        isSimulatedLocal: true,
+      };
+      this.accountAuditMap.set(userId, [entry, ...audits]);
+    } finally {
+      this.accountLocks.delete(lockKey);
+    }
+  }
+
+  async restoreAccount(userId: string, accountId: string, idempotencyKey?: string): Promise<void> {
+    this.ensureUserInitialized(userId);
+    const lockKey = `${userId}:restore:${accountId}`;
+    if (this.accountLocks.has(lockKey)) {
+      throw new Error('Operación sobre la cuenta en curso.');
+    }
+    this.accountLocks.add(lockKey);
+    try {
+      const list = this.accountsMap.get(userId) || [];
+      const target = list.find((a) => a.id === accountId);
+      if (!target || target.userId !== userId) {
+        throw new Error('Cuenta no encontrada o no pertenece al usuario');
+      }
+      const normalizedKey = idempotencyKey?.trim() || undefined;
+      const audits = this.accountAuditMap.get(userId) || [];
+      if (normalizedKey) {
+        const existing = audits.find((e) => e.idempotencyKey === normalizedKey);
+        if (existing) {
+          if (existing.entityId !== accountId || existing.eventType !== 'ACCOUNT_RESTORED') {
+            throw new Error(`Conflicto de idempotencia: la clave ${normalizedKey} ya fue utilizada en otra operación.`);
+          }
+          return;
+        }
+      }
+      if (!target.isArchived) {
+        return;
+      }
+      const now = new Date().toISOString();
+      target.isArchived = false;
+      target.updatedAt = now;
+      const entry: FinancialAuditLogEntry = {
+        id: crypto.randomUUID(),
+        userId,
+        eventType: 'ACCOUNT_RESTORED',
+        entityType: 'accounts',
+        entityId: target.id,
+        amount: target.currentBalance,
+        idempotencyKey: normalizedKey,
+        payload: {
+          account_id: target.id,
+          account_name: target.name,
+          performed_by: userId,
+          operation: 'ACCOUNT_RESTORED',
+          previous_state: { is_archived: true },
+          new_state: { is_archived: false },
+          recorded_at: now,
+          simulated_local: true,
+        },
+        createdAt: now,
+        isSimulatedLocal: true,
+      };
+      this.accountAuditMap.set(userId, [entry, ...audits]);
+    } finally {
+      this.accountLocks.delete(lockKey);
+    }
+  }
+
+  async deleteAccount(userId: string, accountId: string, options?: DeleteAccountOptions): Promise<void> {
+    this.ensureUserInitialized(userId);
+    const lockKey = `${userId}:delete:${accountId}`;
+    if (this.accountLocks.has(lockKey)) {
+      throw new Error('Operación sobre la cuenta en curso.');
+    }
+    this.accountLocks.add(lockKey);
+    try {
+      const accounts = this.accountsMap.get(userId) || [];
+      const target = accounts.find((account) => account.id === accountId);
+      if (!target || target.userId !== userId) {
+        throw new Error('Cuenta no encontrada o no pertenece al usuario');
+      }
+      const hasHistory = (this.incomesMap.get(userId) || []).some((item) => item.accountId === accountId)
+        || (this.paymentsMap.get(userId) || []).some((item) => item.accountId === accountId)
+        || (this.transfersMap.get(userId) || []).some((item) => item.fromAccountId === accountId || item.toAccountId === accountId);
+      if (hasHistory) {
+        throw new Error('La cuenta tiene historial financiero y no puede eliminarse.');
+      }
+      const operationId = options?.operationId?.trim() || crypto.randomUUID();
+      const existingDeletions = this.deletionAuditMap.get(userId) || [];
+      if (existingDeletions.some((d) => d.operationId === operationId)) {
+        throw new Error('El identificador de operación ya fue registrado en auditoría.');
+      }
+      const now = new Date().toISOString();
+      const reason = options?.reason?.trim() || undefined;
+      const deletionAudit: FinancialAccountDeletionAudit = {
+        id: crypto.randomUUID(),
+        accountId: target.id,
+        accountName: target.name,
+        institutionId: target.institutionId,
+        accountType: target.type,
+        ownerUserId: target.userId,
+        deletedBy: userId,
+        deletedAt: now,
+        deletionReason: reason,
+        operationId,
+        metadata: {
+          rpc: 'local_demo_delete_account',
+          operation_type: 'ACCOUNT_DELETED',
+          result: 'SUCCESS',
+          verified_origin: 'No disponible',
+          client_supplied_origin_trusted: false,
+          simulated_local: true,
+          previous_state: {
+            is_archived: target.isArchived,
+            initial_balance: target.initialBalance,
+            current_balance: target.currentBalance,
+            currency: target.currency,
+          },
+          new_state: 'DELETED',
+        },
+        isSimulatedLocal: true,
+      };
+      const logEntry: FinancialAuditLogEntry = {
+        id: crypto.randomUUID(),
+        userId,
+        eventType: 'ACCOUNT_DELETED',
+        entityType: 'accounts',
+        entityId: target.id,
+        amount: target.currentBalance,
+        idempotencyKey: operationId,
+        payload: {
+          account_id: target.id,
+          account_name: target.name,
+          account_type: target.type,
+          institution_id: target.institutionId,
+          owner_user_id: target.userId,
+          deleted_by: userId,
+          operation: 'ACCOUNT_DELETED',
+          operation_id: operationId,
+          deletion_audit_id: deletionAudit.id,
+          deletion_reason: reason,
+          previous_state: { is_archived: target.isArchived, exists: true },
+          new_state: { is_archived: false, exists: false },
+          recorded_at: now,
+          simulated_local: true,
+        },
+        createdAt: now,
+        isSimulatedLocal: true,
+      };
+      this.deletionAuditMap.set(userId, [deletionAudit, ...existingDeletions]);
+      this.accountAuditMap.set(userId, [logEntry, ...(this.accountAuditMap.get(userId) || [])]);
+      this.accountsMap.set(userId, accounts.filter((account) => account.id !== accountId));
+    } finally {
+      this.accountLocks.delete(lockKey);
+    }
+  }
+
+  async getAccountHistory(userId: string, accountId: string): Promise<AccountHistorySummary> {
+    this.ensureUserInitialized(userId);
+    const accounts = this.accountsMap.get(userId) || [];
+    const deletions = this.deletionAuditMap.get(userId) || [];
+    if (!accounts.some((a) => a.id === accountId) && !deletions.some((d) => d.accountId === accountId)) {
       throw new Error('Cuenta no encontrada o no pertenece al usuario');
     }
-    target.isArchived = true;
-    target.updatedAt = new Date().toISOString();
+    return {
+      accountId,
+      incomes: (this.incomesMap.get(userId) || []).filter((i) => i.accountId === accountId),
+      payments: (this.paymentsMap.get(userId) || []).filter((p) => p.accountId === accountId),
+      transfers: (this.transfersMap.get(userId) || []).filter((t) => t.fromAccountId === accountId || t.toAccountId === accountId),
+      auditTrail: (this.accountAuditMap.get(userId) || []).filter((e) => e.entityId === accountId),
+    };
+  }
+
+  async getAccountDeletionAudit(userId: string): Promise<FinancialAccountDeletionAudit[]> {
+    this.ensureUserInitialized(userId);
+    return [...(this.deletionAuditMap.get(userId) || [])];
+  }
+
+  async getAccountAuditTrail(userId: string, accountId?: string): Promise<FinancialAuditLogEntry[]> {
+    this.ensureUserInitialized(userId);
+    const list = this.accountAuditMap.get(userId) || [];
+    return accountId ? list.filter((e) => e.entityId === accountId) : [...list];
   }
 
   // --- REPOSITORIO DE CRÉDITOS ---
@@ -599,6 +839,60 @@ export class LocalFinancialAdapter
   async getCreditProducts(userId: string): Promise<CreditProduct[]> {
     this.ensureUserInitialized(userId);
     return [...(this.creditProductsMap.get(userId) || [])];
+  }
+
+  async registerExistingDebt(userId: string, dto: ExistingDebtInput): Promise<CreditProduct> {
+    validateExistingDebt(dto);
+    this.ensureUserInitialized(userId);
+    const key = `${userId}:${dto.idempotencyKey}`;
+    const previous = this.debtRegistrations.get(key);
+    if (previous) {
+      if (previous.payload !== JSON.stringify(dto)) throw new Error('Conflicto de idempotencia.');
+      return previous.product;
+    }
+    if (!(this.institutionsMap.get(userId) || []).some(i => i.id === dto.institutionId)) throw new Error('Entidad no encontrada o no pertenece al usuario.');
+    const now = new Date().toISOString();
+    const product: CreditProduct = {
+      id: crypto.randomUUID(), userId, institutionId: dto.institutionId, name: dto.name.trim(), type: dto.type,
+      status: 'ACTIVE', originalPrincipal: null, currentPrincipalBalance: dto.openingPrincipalBalance,
+      openingPrincipalBalance: dto.openingPrincipalBalance, trackingStartDate: dto.trackingStartDate,
+      nextDueDate: dto.nextDueDate, agreedInstallment: dto.agreedInstallment, knownInterestMonthly: dto.knownInterestMonthly,
+      obligationKind: dto.obligationKind, remainingInstallments: dto.remainingInstallments,
+      interestRateKnown: dto.nominalRateMonthly !== undefined,
+      nominalRateMonthly: dto.nominalRateMonthly ?? 0, effectiveAnnualRate: FinancialCalculatorV2.convertNmvToEa(dto.nominalRateMonthly ?? 0),
+      capitalizationPeriod: 'MONTHLY', amortizationMethod: 'FIXED_INSTALLMENT', associatedInsurancesMonthly: dto.insuranceMonthly,
+      managementFeeMonthly: dto.feesMonthly, notes: dto.notes, paymentDueDay: Number(dto.nextDueDate.slice(8)), createdAt: now, updatedAt: now,
+    };
+    this.creditProductsMap.set(userId, [...(this.creditProductsMap.get(userId) || []), product]);
+    this.debtRegistrations.set(key, { payload: JSON.stringify(dto), product });
+    return product;
+  }
+
+  async getDebtHistory(userId: string, creditId: string): Promise<DebtHistory> {
+    if (!(this.creditProductsMap.get(userId) || []).some(p => p.id === creditId)) throw new Error('Deuda no encontrada.');
+    const obligations = (this.periodObligationsMap.get(userId) || []).filter(o => o.creditProductId === creditId);
+    return structuredClone({ obligations, payments: (this.paymentsMap.get(userId) || []).filter(p => obligations.some(o => o.id === p.obligationId)), reconciliations: (this.reconciliationsMap.get(userId) || []).filter(r => r.creditProductId === creditId) });
+  }
+
+  async reconcileDebt(userId: string, dto: ReconcileDebtInput): Promise<DebtReconciliation> {
+    const product = (this.creditProductsMap.get(userId) || []).find(p => p.id === dto.creditProductId);
+    if (!product?.trackingStartDate) throw new Error('Deuda con seguimiento no encontrada.');
+    const list = this.reconciliationsMap.get(userId) || [];
+    const existing = list.find(r => r.idempotencyKey === dto.idempotencyKey);
+    if (existing) {
+      if (existing.creditProductId !== dto.creditProductId || existing.reportedBalance !== dto.reportedBalance || existing.statementDate !== dto.statementDate || existing.reason !== dto.reason.trim()) throw new Error('Conflicto de idempotencia.');
+      return existing;
+    }
+    if (!dto.reason.trim() || !dto.idempotencyKey || !validDate(dto.statementDate) || !Number.isFinite(dto.reportedBalance) || dto.reportedBalance < 0) throw new Error('Completa la fecha, el saldo y el motivo de conciliación.');
+    const ids = (this.periodObligationsMap.get(userId) || []).filter(o => o.creditProductId === product.id).map(o => o.id);
+    const latest = [product.trackingStartDate, ...list.filter(r => r.creditProductId === product.id).map(r => r.statementDate), ...(this.paymentsMap.get(userId) || []).filter(p => ids.includes(p.obligationId)).flatMap(p => [p.paymentDate, p.reversedAt?.slice(0, 10) || p.paymentDate])].sort().at(-1)!;
+    if (dto.statementDate < latest) throw new Error('La fecha del extracto debe incluir los movimientos registrados.');
+    if (dto.expectedBalance !== product.currentPrincipalBalance) throw new Error('El saldo cambió. Actualiza el detalle antes de conciliar.');
+    const record: DebtReconciliation = { ...dto, id: crypto.randomUUID(), userId, reason: dto.reason.trim(), calculatedBalance: product.currentPrincipalBalance, difference: FinancialCalculatorV2.fromCents(FinancialCalculatorV2.toCents(dto.reportedBalance) - FinancialCalculatorV2.toCents(product.currentPrincipalBalance)), createdAt: new Date().toISOString() };
+    product.currentPrincipalBalance = dto.reportedBalance;
+    product.status = dto.reportedBalance === 0 ? 'PAID_OFF' : 'ACTIVE';
+    this.reconciliationsMap.set(userId, [...list, record]);
+    return record;
   }
 
   async getCreditProductById(userId: string, creditId: string): Promise<CreditProduct | null> {
@@ -794,6 +1088,14 @@ export class LocalFinancialAdapter
       return existing;
     }
 
+    if (product.trackingStartDate) {
+      const part = trackedInstallment(product, dto.periodYear, dto.periodMonth);
+      const now = new Date().toISOString();
+      const obligation: PeriodObligation = { id: crypto.randomUUID(), userId, creditProductId: product.id, sourceType: 'CREDIT_INSTALLMENT', periodYear: dto.periodYear, periodMonth: dto.periodMonth, name: `Cuota ${product.name}`, amount: part.amount, amountPaid: 0, amountPending: part.amount, status: 'PENDING', orderIndex: existingObs.length + 1, dueDate: part.dueDate, capitalComponent: part.capital, interestCurrentComponent: part.interest, interestMoraComponent: 0, insuranceComponent: part.insurance, otherFeesComponent: part.fees, createdAt: now, updatedAt: now };
+      this.periodObligationsMap.set(userId, [...existingObs, obligation]);
+      return obligation;
+    }
+
     let obName = '';
     let totalAmount = 0;
     let capitalComp = 0;
@@ -908,6 +1210,9 @@ export class LocalFinancialAdapter
       if (!belongs) {
         throw new Error('El producto de crédito asociado no existe o no pertenece al usuario');
       }
+      const product = credits.find(c => c.id === dto.creditProductId)!;
+      if (product.trackingStartDate) trackedInstallment(product, dto.periodYear, dto.periodMonth);
+      if ((this.periodObligationsMap.get(userId) || []).some(o => o.creditProductId === dto.creditProductId && o.periodYear === dto.periodYear && o.periodMonth === dto.periodMonth)) throw new Error('La cuota del período ya existe.');
     }
     const list = this.periodObligationsMap.get(userId) || [];
     const ob: PeriodObligation = {
@@ -924,7 +1229,7 @@ export class LocalFinancialAdapter
       status: 'PENDING',
       dueDate: dto.dueDate,
       orderIndex: list.length + 1,
-      capitalComponent: dto.capitalComponent || dto.amount,
+      capitalComponent: dto.capitalComponent ?? dto.amount,
       interestCurrentComponent: dto.interestCurrentComponent || 0,
       insuranceComponent: dto.insuranceComponent || 0,
       otherFeesComponent: 0,
@@ -938,7 +1243,7 @@ export class LocalFinancialAdapter
   }
 
   async recordPayment(userId: string, dto: RecordPaymentDTO): Promise<FinancialOperationResult> {
-    if (dto.amount <= 0) {
+    if (!Number.isFinite(dto.amount) || dto.amount <= 0 || Math.abs(dto.amount * 100 - Math.round(dto.amount * 100)) > .00001) {
       throw new Error('El monto del pago debe ser mayor a 0');
     }
 
@@ -950,7 +1255,10 @@ export class LocalFinancialAdapter
         if (
           existing.payload.amount !== dto.amount ||
           existing.payload.obligationId !== dto.obligationId ||
-          existing.payload.accountId !== dto.accountId
+          existing.payload.accountId !== dto.accountId ||
+          existing.payload.paymentType !== (dto.paymentType || 'REGULAR_INSTALLMENT') ||
+          existing.payload.paymentDate !== (dto.paymentDate || new Date().toISOString().slice(0,10)) ||
+          JSON.stringify(existing.payload.allocation) !== JSON.stringify(dto.allocation)
         ) {
           throw new Error(`Conflicto de idempotencia: la clave ${dto.idempotencyKey} ya fue utilizada con parámetros diferentes`);
         }
@@ -984,25 +1292,35 @@ export class LocalFinancialAdapter
       }
     }
 
-    // 2. Desglose contable usando la cascada del motor financiero
+    const payments = this.paymentsMap.get(userId) || [];
+    const active = payments.filter(p => p.obligationId === obligation.id && !p.isReversed && p.paymentType !== 'PREPAYMENT_CAPITAL');
+    const cents = FinancialCalculatorV2.toCents;
+    const money = FinancialCalculatorV2.fromCents;
     let appliedCap = 0;
     let appliedInt = 0;
-
+    let appliedIns = 0;
+    let appliedFees = 0;
     if (isPrepayment) {
+      if (!obligation.creditProductId) throw new Error('El abono requiere una deuda asociada.');
       appliedCap = dto.amount;
     } else if (dto.allocation) {
-      appliedCap = dto.allocation.appliedToCapital || 0;
-      appliedInt = dto.allocation.appliedToInterest || 0;
+      appliedCap = dto.allocation.appliedToCapital ?? 0;
+      appliedInt = dto.allocation.appliedToInterest ?? 0;
+      appliedIns = dto.allocation.appliedToInsurance ?? 0;
+      appliedFees = dto.allocation.appliedToFees ?? 0;
     } else {
-      // Cascada estándar: Seguro -> Interés -> Capital
-      let rem = dto.amount;
-      const insTake = Math.min(rem, obligation.insuranceComponent);
-      rem -= insTake;
-      const intTake = Math.min(rem, obligation.interestCurrentComponent);
-      rem -= intTake;
-      appliedInt = intTake;
-      appliedCap = rem;
+      const cascade = allocatePaymentCascade(obligation, payments, dto.amount);
+      appliedFees = cascade.appliedToFees;
+      appliedIns = cascade.appliedToInsurance;
+      appliedInt = cascade.appliedToInterest;
+      appliedCap = cascade.appliedToCapital;
     }
+    if ([appliedCap, appliedInt, appliedIns, appliedFees].some(n => !Number.isFinite(n) || n < 0) || [appliedCap, appliedInt, appliedIns, appliedFees].reduce((sum,n) => sum+cents(n),0) !== cents(dto.amount)) throw new Error('El desglose debe sumar el importe del pago.');
+    const debt = (this.creditProductsMap.get(userId) || []).find(c => c.id === obligation.creditProductId);
+    if (debt && appliedCap > debt.currentPrincipalBalance) throw new Error('El capital supera el saldo de la deuda.');
+    const date = dto.paymentDate || new Date().toISOString().slice(0,10);
+    if (!validDate(date) || (debt?.trackingStartDate && date < debt.trackingStartDate)) throw new Error('Fecha de pago fuera del seguimiento.');
+    if (account.isArchived) throw new Error('La cuenta esta archivada.');
 
     // 3. Débito a la cuenta (en centavos exactos)
     account.currentBalance = FinancialCalculatorV2.fromCents(
@@ -1023,7 +1341,7 @@ export class LocalFinancialAdapter
     }
 
     // 5. Amortización a capital si aplica
-    if (obligation.creditProductId && appliedCap > 0) {
+    if (obligation.creditProductId) {
       const credits = this.creditProductsMap.get(userId) || [];
       const credit = credits.find((c) => c.id === obligation.creditProductId);
       if (credit) {
@@ -1041,14 +1359,16 @@ export class LocalFinancialAdapter
               FinancialCalculatorV2.toCents(credit.approvedCreditLimit || 0) - FinancialCalculatorV2.toCents(credit.usedCreditLimit)
             )
           );
-        } else if (obligation.status === 'PAID' && credit.remainingInstallments && credit.remainingInstallments > 0) {
+        } else if (!isPrepayment && obligation.status === 'PAID' && credit.remainingInstallments && credit.remainingInstallments > 0) {
           credit.remainingInstallments = Math.max(0, credit.remainingInstallments - 1);
         }
         credit.updatedAt = new Date().toISOString();
+        if (credit.currentPrincipalBalance === 0) credit.status = 'PAID_OFF';
       }
     }
 
-    const paymentId = 'pay-' + Date.now();
+    const paymentId = crypto.randomUUID();
+    this.paymentsMap.set(userId, [...payments, { id: paymentId, userId, obligationId: dto.obligationId, accountId: dto.accountId, amount: dto.amount, paymentType: dto.paymentType || 'REGULAR_INSTALLMENT', paymentDate: date, appliedToCapital: appliedCap, appliedToInterest: appliedInt, appliedToInsurance: appliedIns, appliedToFees: appliedFees, referenceNumber: dto.referenceNumber, idempotencyKey: dto.idempotencyKey, notes: dto.notes, isReversed: false, createdAt: new Date().toISOString() }]);
     const result: FinancialOperationResult = {
       success: true,
       operationId: paymentId,
@@ -1062,7 +1382,7 @@ export class LocalFinancialAdapter
     if (dto.idempotencyKey) {
       this.idempotencyStore.set(`${userId}:${dto.idempotencyKey}`, {
         result,
-        payload: { amount: dto.amount, obligationId: dto.obligationId, accountId: dto.accountId },
+        payload: { amount: dto.amount, obligationId: dto.obligationId, accountId: dto.accountId, paymentType: dto.paymentType || 'REGULAR_INSTALLMENT', paymentDate: date, allocation: dto.allocation },
       });
     }
 
@@ -1100,6 +1420,9 @@ export class LocalFinancialAdapter
       targetAccount = accounts.find((a) => a.id === dto.accountId);
       if (!targetAccount) {
         throw new Error('La cuenta seleccionada no existe o no pertenece al usuario');
+      }
+      if (targetAccount.isArchived) {
+        throw new Error('La cuenta esta archivada.');
       }
       targetAccount.currentBalance = FinancialCalculatorV2.fromCents(
         FinancialCalculatorV2.toCents(targetAccount.currentBalance) + FinancialCalculatorV2.toCents(dto.amount)
@@ -1174,6 +1497,9 @@ export class LocalFinancialAdapter
     if (!fromAcc || !toAcc) {
       throw new Error('Una de las cuentas no existe o no pertenece al usuario');
     }
+    if (fromAcc.isArchived || toAcc.isArchived) {
+      throw new Error('La cuenta esta archivada.');
+    }
 
     const totalDebit = FinancialCalculatorV2.fromCents(
       FinancialCalculatorV2.toCents(dto.amount) + FinancialCalculatorV2.toCents(dto.feeAmount || 0)
@@ -1193,7 +1519,8 @@ export class LocalFinancialAdapter
     );
     toAcc.updatedAt = new Date().toISOString();
 
-    const transferId = 'tr-' + Date.now();
+    const transferId = crypto.randomUUID();
+    this.transfersMap.set(userId, [...(this.transfersMap.get(userId) || []), { id: transferId, userId, fromAccountId: dto.fromAccountId, toAccountId: dto.toAccountId, amount: dto.amount, feeAmount: dto.feeAmount || 0, transferDate: new Date().toISOString().slice(0,10), isReversed: false, idempotencyKey: dto.idempotencyKey, notes: dto.notes, createdAt: new Date().toISOString() }]);
     const result: FinancialOperationResult = {
       success: true,
       operationId: transferId,
@@ -1216,7 +1543,41 @@ export class LocalFinancialAdapter
       throw new Error('Debe especificarse un motivo justificativo para el reverso financiero');
     }
 
-    if (dto.operationType === 'INCOME') {
+    if (dto.operationType === 'PAYMENT') {
+      const payment = (this.paymentsMap.get(userId) || []).find(p => p.id === dto.operationId);
+      if (!payment || payment.isReversed) throw new Error('Pago no encontrado o ya revertido.');
+      const obligation = (this.periodObligationsMap.get(userId) || []).find(o => o.id === payment.obligationId)!;
+      const account = (this.accountsMap.get(userId) || []).find(a => a.id === payment.accountId)!;
+      const money = (n: number) => FinancialCalculatorV2.fromCents(FinancialCalculatorV2.toCents(n));
+      account.currentBalance = money(account.currentBalance + payment.amount);
+      const wasPaid = obligation.status === 'PAID';
+      if (payment.paymentType !== 'PREPAYMENT_CAPITAL') {
+        obligation.amountPaid = money(obligation.amountPaid - payment.amount);
+        obligation.amountPending = money(obligation.amountPending + payment.amount);
+        obligation.status = obligation.amountPaid > 0 ? 'PARTIAL' : 'PENDING';
+      }
+      const product = (this.creditProductsMap.get(userId) || []).find(p => p.id === obligation.creditProductId);
+      if (product) {
+        product.currentPrincipalBalance = money(product.currentPrincipalBalance + payment.appliedToCapital);
+        if (wasPaid && payment.paymentType !== 'PREPAYMENT_CAPITAL' && product.remainingInstallments !== undefined) product.remainingInstallments++;
+        if (product.currentPrincipalBalance > 0 && product.status === 'PAID_OFF') product.status = 'ACTIVE';
+      }
+      payment.isReversed = true;
+      payment.reversedAt = new Date().toISOString();
+      payment.reversalReason = dto.reason;
+    } else if (dto.operationType === 'TRANSFER') {
+      const transfer = (this.transfersMap.get(userId) || []).find(t => t.id === dto.operationId);
+      if (!transfer || transfer.isReversed) throw new Error('Transferencia no encontrada o ya revertida.');
+      const accounts = this.accountsMap.get(userId) || [];
+      const from = accounts.find(a => a.id === transfer.fromAccountId)!;
+      const to = accounts.find(a => a.id === transfer.toAccountId)!;
+      if (to.currentBalance < transfer.amount) throw new Error('Saldo insuficiente para revertir.');
+      from.currentBalance = FinancialCalculatorV2.fromCents(FinancialCalculatorV2.toCents(from.currentBalance) + FinancialCalculatorV2.toCents(transfer.amount) + FinancialCalculatorV2.toCents(transfer.feeAmount));
+      to.currentBalance = FinancialCalculatorV2.fromCents(FinancialCalculatorV2.toCents(to.currentBalance) - FinancialCalculatorV2.toCents(transfer.amount));
+      transfer.isReversed = true;
+      transfer.reversedAt = new Date().toISOString();
+      transfer.reversalReason = dto.reason;
+    } else if (dto.operationType === 'INCOME') {
       const incomes = this.incomesMap.get(userId) || [];
       const inc = incomes.find((i) => i.id === dto.operationId);
       if (!inc) {
